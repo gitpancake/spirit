@@ -1,0 +1,26 @@
+{
+  "original_filename": "1289_something_approaches_underwater.jpg",
+  "ipfs_hash": "bafkreidzvi2gtfystbm3uxio2jc4ymm4xw457ezgxhnnqcuftasey24u4i",
+  "work_id": "1cd55ae7-42b1-4147-b5fa-d1f1932718b7",
+  "title": "something approaches underwater",
+  "archive_number": "1289",
+  "created_date": "2021-06-18",
+  "name": "something approaches underwater",
+  "description": "something approaches underwater",
+  "image": "ipfs://bafkreidzvi2gtfystbm3uxio2jc4ymm4xw457ezgxhnnqcuftasey24u4i",
+  "tokenId": 2,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "1289"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-18"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "1289_something_approaches_underwater.jpg"
+    }
+  ]
+}

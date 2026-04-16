@@ -1,0 +1,172 @@
+# Genesis Registry API - LLM Context
+
+## Overview
+Genesis Registry API is a Next.js 15 backend service that manages Spirit Registry NFT applications on Ethereum and provides a secure proxy to Eden AI services. The system integrates blockchain operations with AI agent platform functionality.
+
+## Core Architecture
+- **Framework**: Next.js 15 with TypeScript 5 and Turbopack
+- **Blockchain**: Ethereum (Mainnet/Sepolia) via Viem 2.35.1
+- **Storage**: IPFS via Pinata 2.5.0 for metadata
+- **External APIs**: Eden AI proxy with secure authentication
+- **Contract**: Spirit Registry NFT contract for agent registration
+- **Auth**: Privy.io for wallet authentication
+- **Validation**: Zod 4.1.1 for schema validation
+
+## API Documentation Structure
+
+### Spirit Registry Endpoints
+- `POST /api/spirits/apply` - Submit Spirit Registry application for NFT minting on Ethereum
+  - Required: name, handle, role, public_persona, artist_wallet
+  - Returns: success, taskId, message
+  
+- `GET /api/spirits/by-token-id/{tokenId}` - Get detailed agent information by NFT token ID
+  - Returns: tokenId, agentId, status, metadata with name/description/image
+  
+- `GET /api/spirits/all` - List all registered agents in the Spirit Registry
+  - Returns: array of agents with tokenId, agentId, status, metadata
+  
+- `GET /api/spirits/contract-state` - Get current Spirit Registry contract state
+  - Returns: currentTokenId, totalTokensIssued, contract name/symbol/owner, registeredAgentsCount
+
+### Eden API Endpoints (Proxy to api.eden.art/v2)
+- `POST /api/eden/sessions/create` - Create new chat session with Eden AI agent
+  - Required: agentId
+  - Optional: config object for session configuration
+  - Returns: sessionId and session data with messages array
+  
+- `GET /api/eden/sessions/{sessionId}` - Get session details and complete message history
+  - Returns: session with _id, agentId, messages array with role/content/timestamps
+  
+- `POST /api/eden/sessions/send` - Send message to existing Eden chat session
+  - Required: sessionId, message
+  - Returns: new message object with _id, sessionId, role, content, createdAt
+  
+- `GET /api/eden/creations` - List Eden creations with pagination
+  - Optional: limit (1-100, default 50), page (default 1)
+  - Returns: docs array, totalDocs, nextCursor for pagination
+  
+- `GET /api/eden/creations/search` - Search creations with query and filters
+  - Required: q (search query)
+  - Optional: limit, style, model, user_id, agent_id filters
+  - Returns: filtered docs array with creation objects
+  
+- `GET /api/eden/agents/{id}/creations` - Get creations by specific Eden agent
+  - Optional: limit parameter for pagination
+  - Returns: agent-specific creations with metadata
+  
+- `GET /api/eden/users/{id}/creations` - Get creations by specific Eden user
+  - Optional: limit parameter for pagination
+  - Returns: user-specific creations with metadata
+
+### Utility Endpoints
+- `POST /api/image/upload` - Upload images to IPFS via Pinata
+  - Required: image file (binary data)
+  - Returns: success, ipfsHash, full IPFS URL
+  
+- `GET /api/networks` - Get network configuration and contract addresses
+  - Returns: environment, ethereumNetwork details (id/name/network), contractAddresses
+
+## Key File Structure
+
+### Core Libraries
+- `src/lib/eden-proxy-utils.ts` - Eden API utilities
+  - `makeEdenRequest()` - HTTP requests with timeout/retry logic
+  - `createSuccessResponse()` / `createErrorResponse()` - Standardized responses
+  - `validateEdenApiKey()` - Environment variable validation
+  - CORS headers and request logging functionality
+  
+- `src/lib/eden-proxy-types.ts` - TypeScript interfaces
+  - `EdenApiResponse<T>` - Standard response wrapper
+  - `Session`, `SessionMessage`, `Creation` interfaces
+  - `CreationsResponse`, `CreationsQuery` types for pagination
+  
+- `src/lib/eden-api.ts` - Legacy centralized handler (replaced by proxy system)
+
+### API Route Structure
+- `app/api/eden/` - Complete Eden proxy system (8 endpoints)
+  - `sessions/create/route.ts`, `sessions/[id]/route.ts`, `sessions/send/route.ts`
+  - `creations/route.ts`, `creations/search/route.ts`
+  - `agents/[id]/creations/route.ts`, `users/[id]/creations/route.ts`
+  
+- `app/api/spirits/` - Spirit application endpoints
+  - `apply/route.ts` - Application submission
+  - `contract-state/route.ts` - Contract state queries
+  
+- `app/api/spirits/` - Agent lookup endpoints
+- `app/api/image/` - IPFS upload functionality
+
+### Documentation & Frontend
+- `app/docs/page.tsx` - Interactive API documentation with live testing
+  - Organized sections: Spirit Registry, Eden API, Utilities  
+  - Live curl command generation and request testing
+  - Response examples for all endpoints
+  
+- `FRONTEND_MIGRATION_GUIDE.md` - Complete migration guide
+  - Before/after examples for all endpoints
+  - Response format changes and helper functions
+  - Common migration issues and solutions
+
+## Environment Configuration
+```bash
+# Required Environment Variables
+EDEN_API_KEY=your_eden_api_key          # Eden API authentication
+PINATA_JWT=your_pinata_jwt              # IPFS uploads
+PRIVATE_KEY=your_ethereum_private_key    # Blockchain operations
+NEXT_PUBLIC_SPIRIT_REGISTRY_ADDRESS=0x... # Contract address
+
+# Network URLs
+RPC_URL=https://mainnet.infura.io/v3/...     # Ethereum Mainnet
+RPC_URL_SEPOLIA=https://sepolia.infura.io/v3/... # Ethereum Sepolia
+```
+
+## Response Format Standard
+All API endpoints use consistent response format:
+```typescript
+// Success Response
+{
+  success: true,
+  data: T  // Typed response data
+}
+
+// Error Response  
+{
+  success: false,
+  error: string,           // Error message
+  details?: string,        // Additional error details
+  statusCode?: number      // HTTP status code
+}
+```
+
+## Technical Implementation Details
+- **CORS Support**: Full cross-origin request handling with appropriate headers
+- **Timeout Handling**: 30-second timeout on Eden API requests with AbortController
+- **Request Logging**: Comprehensive logging with timestamps, duration, and error tracking
+- **Error Mapping**: HTTP status codes mapped to descriptive error messages
+- **Pagination**: Standardized pagination with limit (1-100) and cursor support
+- **Type Safety**: Full TypeScript coverage with Zod validation schemas
+- **Security**: Eden API key securely handled server-side, never exposed to frontend
+
+## Dependencies (Key Versions)
+- Next.js 15.5.0 with React 19.1.0
+- Viem 2.35.1 for Ethereum operations
+- Pinata 2.5.0 for IPFS integration
+- Zod 4.1.1 for runtime validation
+- TypeScript 5 with strict configuration
+- ESLint 9 with Next.js configuration
+
+## Development Commands
+```bash
+npm run dev      # Development server with Turbopack
+npm run build    # Production build with Turbopack  
+npm run start    # Production server
+npm run lint     # ESLint code checking
+```
+
+## Recent Architectural Changes
+- **Removed**: Complex wallet management system, RabbitMQ async processing, Base network support
+- **Simplified**: To Ethereum Mainnet/Sepolia only operations
+- **Added**: Complete Eden API proxy system with 8 secure endpoints
+- **Enhanced**: API documentation with clear section organization and live testing
+- **Created**: Comprehensive frontend migration guide with examples
+
+This system prioritizes security, type safety, and developer experience while providing a clean interface between frontend applications and both blockchain operations and Eden AI services.

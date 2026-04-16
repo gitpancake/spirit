@@ -1,0 +1,36 @@
+Name,Bucket,Amount,CliffAmount,CliffDate,EndDate,Address,Category,Notes
+Gene,Eden Existing,75000000,15000000,2027-01-15,2030-01-15,0x,shareholder,37.50% of Eden
+Xander,Eden Existing,42000000,8400000,2027-01-15,2030-01-15,0x,shareholder,21.00% of Eden
+Seth,Eden Existing,45400000,9080000,2027-01-15,2030-01-15,0x,shareholder,22.70% of Eden
+Flo (former),Eden Existing,660000,132000,2027-01-15,2030-01-15,0x,former,0.33% of Eden
+Jmill,Eden Existing,1240000,248000,2027-01-15,2030-01-15,0x,shareholder,0.62% of Eden
+Advisors,Eden Existing,2920000,584000,2027-01-15,2030-01-15,0x,advisors,1.46% of Eden - may need to split
+SAFE A (Angels),Eden Existing,12780000,2556000,2027-01-15,2030-01-15,0x,investor,6.39% of Eden
+SAFE B (USV + Gould),Eden Existing,20000000,4000000,2027-01-15,2030-01-15,0x,investor,10.00% of Eden
+Eden Future Reserve,Eden Reserve,50000000,10000000,2027-01-15,2030-01-15,TBD,placeholder,Future hires/investors in Eden
+Seth Goldstein,Protocol Team,29600000,5920000,2027-01-15,2030-01-15,0x,team,29.60% of Protocol Team bucket
+Additional Team,Protocol Team,70400000,14080000,2027-01-15,2030-01-15,TBD,placeholder,Future team pool - 70.40% of bucket
+aaron/priyanka,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,governance: mtg with them in nyc dec 15-17
+delronde,Community Upfront,1000000,200000,2027-01-15,2030-01-15,0x,advisor,ai art expert
+dimi,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,first eden investor; founding team of Ocean Protocol
+eko33,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,genesis artist,Johnny Rico agent
+evan (metaissance),Community Upfront,1000000,200000,2027-01-15,2030-01-15,0x,advisor,ai art expert
+freeman,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,eden pattern recognition; co-founder of Mars
+jediwolf,Community Upfront,1000000,200000,2027-01-15,2030-01-15,0x,advisor,ai art expert
+jeremiah chechik,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,artist,Capa2 agent
+kelly lavalley,Community Upfront,1000000,200000,2027-01-15,2030-01-15,0x,advisor,connections; worked with Lubin early consensus
+kristi coronado,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,genesis artist,Solienne agent
+lattice (martin/colin),Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,genesis artist,Geppetto agent
+lex sokolin,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,tokenomics/legal
+matt/holly,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,artist,AI pattern recognition
+phil mohun,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,onchain expert; farcaster influencer; NODE director
+pindar van arman,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,genesis artist,cloudpainter agent
+primavera di filippi,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,thought leadership & governance
+simon de la rouviere,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,token experiments / thought leader
+simon hudson,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,botto pattern recognition
+henry pye,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,original protocol advisor - NOT in Protocol Team
+mikey/ezra,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,genesis artist,culture agent
+tbd (genesis artist),Community Upfront,5000000,1000000,2027-01-15,2030-01-15,TBD,genesis artist,placeholder
+tbd (small),Community Upfront,1000000,200000,2027-01-15,2030-01-15,TBD,tbd,placeholder
+vanessa rosa,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,artist,Verdelis agent
+will papper,Community Upfront,5000000,1000000,2027-01-15,2030-01-15,0x,advisor,tokenomics

@@ -1,0 +1,37 @@
+{
+  "name": "eden-academy",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 3022",
+    "build": "next build --turbopack",
+    "start": "next start -p 3022",
+    "lint": "eslint",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@privy-io/react-auth": "^2.22.0",
+    "@privy-io/wagmi": "^1.0.6",
+    "@tanstack/react-query": "^5.85.5",
+    "@upstash/redis": "^1.35.3",
+    "framer-motion": "^12.23.12",
+    "next": "15.5.2",
+    "permissionless": "^0.2.54",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "viem": "^2.36.0",
+    "wagmi": "^2.16.8"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.2",
+    "husky": "^9.1.7",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

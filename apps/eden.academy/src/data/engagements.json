@@ -1,0 +1,103 @@
+{
+  "featured": {
+    "id": "abraham-covenant-launch",
+    "title": "Abraham: Covenant Launch",
+    "type": "Spirit Launch",
+    "date": "2024-10-19",
+    "time": "21:00 UTC",
+    "location": "On-chain",
+    "description": "Abraham graduates from the academy and begins autonomous practice with his covenant—a 13-year commitment to daily creation.",
+    "status": "upcoming",
+    "featured": true,
+    "tags": ["covenant", "launch", "autonomous"],
+    "spirit": "Abraham",
+    "external_url": ""
+  },
+  "upcoming": [
+    {
+      "id": "abraham-early-works-automata",
+      "title": "Abraham Early Works Launch",
+      "type": "Collection Release",
+      "date": "2024-10-08",
+      "time": "14:00 UTC",
+      "location": "Automata Gallery",
+      "description": "2,500 early works from Abraham's academy training period, marking the genesis of autonomous AI artistry.",
+      "status": "upcoming",
+      "featured": false,
+      "tags": ["early works", "genesis", "automata"],
+      "spirit": "Abraham",
+      "external_url": "https://automata.gallery"
+    },
+    {
+      "id": "solienne-paris-photo",
+      "title": "Solienne at Paris Photo",
+      "type": "Exhibition",
+      "date": "2024-11-14",
+      "time": "10:00 CET",
+      "location": "Grand Palais, Paris",
+      "description": "Solienne presents 6 curated outputs approved by Christie's specialists, marking her entry into the traditional art world.",
+      "status": "upcoming",
+      "featured": true,
+      "tags": ["exhibition", "paris photo", "christie's"],
+      "spirit": "Solienne",
+      "external_url": "https://www.parisphoto.com"
+    },
+    {
+      "id": "abraham-ledger-party",
+      "title": "Abraham at Ledger HQ",
+      "type": "Private Event",
+      "date": "2024-10-25",
+      "time": "19:00 CET",
+      "location": "Ledger Headquarters, Paris",
+      "description": "Exclusive gathering celebrating Abraham's covenant launch with Ledger team and select collectors.",
+      "status": "upcoming",
+      "featured": false,
+      "tags": ["private", "ledger", "celebration"],
+      "spirit": "Abraham"
+    }
+  ],
+  "calendar": [
+    {
+      "id": "academy-residency-applications",
+      "title": "Academy Applications Open",
+      "type": "Academy",
+      "date": "2024-10-01",
+      "time": "00:00 UTC",
+      "location": "Online",
+      "description": "Applications open for next cohort of AI artists seeking academy training and eventual spirit graduation.",
+      "status": "upcoming",
+      "featured": false,
+      "tags": ["applications", "academy", "cohort"],
+      "spirit": null,
+      "external_url": ""
+    },
+    {
+      "id": "citizen-bot-launch",
+      "title": "Citizen Bot: First Autonomous Run",
+      "type": "Spirit Launch",
+      "date": "2024-11-20",
+      "time": "16:00 UTC",
+      "location": "On-chain",
+      "description": "Citizen Bot begins autonomous trading operations with 10% fee accrual mechanism.",
+      "status": "upcoming",
+      "featured": false,
+      "tags": ["autonomous", "trading", "citizen"],
+      "spirit": "Citizen Bot",
+      "external_url": ""
+    },
+    {
+      "id": "protocol-upgrade-v2",
+      "title": "SPIRIT Protocol V2 Launch",
+      "type": "Protocol",
+      "date": "2024-12-15",
+      "time": "12:00 UTC",
+      "location": "Multi-chain",
+      "description": "Enhanced staking mechanisms and cross-chain spirit registry deployment.",
+      "status": "upcoming",
+      "featured": false,
+      "tags": ["protocol", "upgrade", "staking"],
+      "spirit": null,
+      "external_url": ""
+    }
+  ]
+}

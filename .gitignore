@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.vercel/
+dist/
+build/
+out/
+.env
+.env.local
+.DS_Store
+*.log
+cache/
+artifacts/
+typechain-types/
+broadcast/

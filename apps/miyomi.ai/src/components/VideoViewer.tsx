@@ -1,0 +1,195 @@
+'use client'
+
+import { useState } from 'react'
+
+interface VideoViewerProps {
+  videoUrl: string
+  onClose: () => void
+  title?: string
+}
+
+export function VideoViewer({ videoUrl, onClose, title }: VideoViewerProps) {
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+
+  const handleVideoLoad = () => {
+    setIsLoading(false)
+    setHasError(false)
+  }
+
+  const handleVideoError = () => {
+    setIsLoading(false)
+    setHasError(true)
+  }
+
+  const handleDownload = () => {
+    const link = document.createElement('a')
+    link.href = videoUrl
+    link.download = `miyomi-video-${Date.now()}.mp4`
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title || 'Miyomi Generated Video',
+          url: videoUrl
+        })
+      } catch {
+        // Fallback to clipboard
+        copyToClipboard()
+      }
+    } else {
+      copyToClipboard()
+    }
+  }
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(videoUrl)
+      // Show a temporary notification
+      showCopyNotification()
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err)
+    }
+  }
+
+  const showCopyNotification = () => {
+    const notification = document.createElement('div')
+    notification.className = 'fixed top-4 right-4 bg-white text-black px-4 py-2 rounded border z-50'
+    notification.textContent = 'Video URL copied to clipboard!'
+    document.body.appendChild(notification)
+    
+    setTimeout(() => {
+      notification.style.opacity = '0'
+      setTimeout(() => {
+        document.body.removeChild(notification)
+      }, 300)
+    }, 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+      <div className="bg-black border border-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b border-white">
+          <h3 className="text-lg font-bold text-white">
+            {title || 'Generated Video'}
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownload}
+              className="border border-white px-3 py-1 text-sm text-white hover:bg-white hover:text-black transition-colors"
+              title="Download Video"
+            >
+              ⬇️ DOWNLOAD
+            </button>
+            <button
+              onClick={handleShare}
+              className="border border-white px-3 py-1 text-sm text-white hover:bg-white hover:text-black transition-colors"
+              title="Share Video"
+            >
+              🔗 SHARE
+            </button>
+            <button
+              onClick={onClose}
+              className="border border-white px-3 py-1 text-sm text-white hover:bg-white hover:text-black transition-colors"
+              title="Close"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Video Content */}
+        <div className="relative bg-black flex items-center justify-center" style={{ minHeight: '400px' }}>
+          {isLoading && !hasError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-center">
+                <div className="animate-spin text-2xl mb-2">⚡</div>
+                <p>Loading video...</p>
+              </div>
+            </div>
+          )}
+
+          {hasError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-center">
+                <div className="text-2xl mb-2">❌</div>
+                <p>Failed to load video</p>
+                <button
+                  onClick={() => window.open(videoUrl, '_blank')}
+                  className="border border-white px-4 py-2 mt-4 hover:bg-white hover:text-black transition-colors"
+                >
+                  Open in New Tab
+                </button>
+              </div>
+            </div>
+          )}
+
+          <video
+            src={videoUrl}
+            controls
+            autoPlay
+            loop
+            className={`max-w-full max-h-full ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+            onLoadedData={handleVideoLoad}
+            onError={handleVideoError}
+            style={{
+              maxHeight: 'calc(90vh - 120px)',
+              width: 'auto',
+              height: 'auto'
+            }}
+          />
+        </div>
+
+        {/* Footer Info */}
+        <div className="p-4 border-t border-white text-sm text-white">
+          <div className="flex justify-between items-center">
+            <div>
+              <p>Generated by Miyomi AI • Eden API</p>
+            </div>
+            <div className="text-right text-xs">
+              <p>Video URL: {videoUrl.substring(0, 50)}...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Simple modal backdrop click handler
+export function useVideoViewer() {
+  const [viewingVideo, setViewingVideo] = useState<{
+    url: string
+    title?: string
+  } | null>(null)
+
+  const openVideo = (url: string, title?: string) => {
+    setViewingVideo({ url, title })
+  }
+
+  const closeVideo = () => {
+    setViewingVideo(null)
+  }
+
+  const VideoViewerComponent = viewingVideo ? (
+    <VideoViewer
+      videoUrl={viewingVideo.url}
+      title={viewingVideo.title}
+      onClose={closeVideo}
+    />
+  ) : null
+
+  return {
+    openVideo,
+    closeVideo,
+    VideoViewerComponent,
+    isViewingVideo: !!viewingVideo
+  }
+}

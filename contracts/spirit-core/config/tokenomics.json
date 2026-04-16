@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Spirit Protocol V1 Tokenomics - Source of Truth",
+  "_generated": "2025-12-10",
+  "_version": "1.0.0",
+
+  "totalSupply": "1000000000",
+
+  "buckets": {
+    "programmatic": {
+      "name": "Community (Programmatic)",
+      "amount": "300000000",
+      "percent": "30%",
+      "vesting": "none",
+      "notes": "No vesting. Programmatically streamed to Artists beyond the first 10 via child-token airstream mechanism."
+    },
+
+    "treasury": {
+      "name": "Treasury",
+      "amount": "250000000",
+      "percent": "25%",
+      "vesting": "1 year linear vest",
+      "notes": "Used for LP, OTC, presale, partner/community distributions.",
+      "subAllocations": {
+        "otc": {
+          "name": "Available for OTC sales",
+          "amount": "110000000",
+          "percentOfBucket": "44%",
+          "percentOfTotal": "11%"
+        },
+        "lp": {
+          "name": "LP (Uniswap V4)",
+          "amount": "50000000",
+          "percentOfBucket": "20%",
+          "percentOfTotal": "5%"
+        },
+        "presale": {
+          "name": "Pre-sale",
+          "amount": "50000000",
+          "percentOfBucket": "20%",
+          "percentOfTotal": "5%"
+        },
+        "aerodrome": {
+          "name": "Aerodrome Ignition",
+          "amount": "10000000",
+          "percentOfBucket": "4%",
+          "percentOfTotal": "1%"
+        },
+        "braindrops": {
+          "name": "Braindrops Holders",
+          "amount": "10000000",
+          "percentOfBucket": "4%",
+          "percentOfTotal": "1%"
+        },
+        "brightMoments": {
+          "name": "Bright Moments Citizens",
+          "amount": "10000000",
+          "percentOfBucket": "4%",
+          "percentOfTotal": "1%"
+        },
+        "superfluidDao": {
+          "name": "Superfluid DAO",
+          "amount": "5000000",
+          "percentOfBucket": "2%",
+          "percentOfTotal": "0.5%",
+          "notes": "Partner allocation to Superfluid DAO multisig"
+        },
+        "superfluidStakers": {
+          "name": "Superfluid Stakers",
+          "amount": "5000000",
+          "percentOfBucket": "2%",
+          "percentOfTotal": "0.5%",
+          "notes": "1-year streaming program to SUP stakers"
+        }
+      }
+    },
+
+    "edenExisting": {
+      "name": "Eden Incubation / Existing",
+      "amount": "200000000",
+      "percent": "20%",
+      "vesting": "12m cliff + 36m linear",
+      "notes": "Current Eden shareholders",
+      "recipients": [
+        { "name": "Gene", "amount": "75000000", "percentOfBucket": "37.50%", "percentOfTotal": "7.50%" },
+        { "name": "Xander", "amount": "42000000", "percentOfBucket": "21.00%", "percentOfTotal": "4.20%" },
+        { "name": "Seth", "amount": "45400000", "percentOfBucket": "22.70%", "percentOfTotal": "4.54%" },
+        { "name": "Flo (former)", "amount": "660000", "percentOfBucket": "0.33%", "percentOfTotal": "0.066%" },
+        { "name": "Jmill", "amount": "1240000", "percentOfBucket": "0.62%", "percentOfTotal": "0.124%" },
+        { "name": "Advisors", "amount": "2920000", "percentOfBucket": "1.46%", "percentOfTotal": "0.292%" },
+        { "name": "SAFE A (Angels)", "amount": "12780000", "percentOfBucket": "6.39%", "percentOfTotal": "1.278%" },
+        { "name": "SAFE B (USV + Gould)", "amount": "20000000", "percentOfBucket": "10.00%", "percentOfTotal": "2.00%" }
+      ]
+    },
+
+    "edenReserve": {
+      "name": "Eden Incubation / Reserve",
+      "amount": "50000000",
+      "percent": "5%",
+      "vesting": "12m cliff + 36m linear",
+      "notes": "Future hires/investors in Eden",
+      "recipients": [
+        { "name": "Eden Future Reserve", "amount": "50000000", "address": "TBD", "notes": "Placeholder for future allocations" }
+      ]
+    },
+
+    "protocolTeam": {
+      "name": "Protocol Team",
+      "amount": "100000000",
+      "percent": "10%",
+      "vesting": "12m cliff + 36m linear",
+      "notes": "Seth + future team. Henry is NOT in this bucket.",
+      "recipients": [
+        { "name": "Seth Goldstein", "amount": "29600000", "percentOfBucket": "29.60%", "percentOfTotal": "2.96%" },
+        { "name": "Additional Team", "amount": "70400000", "percentOfBucket": "70.40%", "percentOfTotal": "7.04%", "address": "TBD", "notes": "Future team pool" }
+      ]
+    },
+
+    "communityUpfront": {
+      "name": "Community Upfront",
+      "amount": "100000000",
+      "percent": "10%",
+      "vesting": "12m cliff + 36m linear",
+      "notes": "Genesis artists + advisors. Includes Henry Pye as advisor (not Protocol Team).",
+      "recipients": [
+        { "name": "aaron/priyanka", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "governance: mtg with them in nyc dec 15-17" },
+        { "name": "delronde", "category": "advisor", "amount": "1000000", "percentOfTotal": "0.10%", "notes": "ai art expert" },
+        { "name": "dimi", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "first eden investor; founding team of Ocean Protocol" },
+        { "name": "eko33", "category": "genesis artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "Johnny Rico agent" },
+        { "name": "evan (metaissance)", "category": "advisor", "amount": "1000000", "percentOfTotal": "0.10%", "notes": "ai art expert" },
+        { "name": "freeman", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "eden pattern recognition; co-founder of Mars" },
+        { "name": "jediwolf", "category": "advisor", "amount": "1000000", "percentOfTotal": "0.10%", "notes": "ai art expert" },
+        { "name": "jeremiah chechik", "category": "artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "Capa2 agent" },
+        { "name": "kelly lavalley", "category": "advisor", "amount": "1000000", "percentOfTotal": "0.10%", "notes": "connections; worked with Lubin early consensus" },
+        { "name": "kristi coronado", "category": "genesis artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "Solienne agent" },
+        { "name": "lattice (martin/colin)", "category": "genesis artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "Geppetto agent" },
+        { "name": "lex sokolin", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "tokenomics/legal" },
+        { "name": "matt/holly", "category": "artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "AI pattern recognition" },
+        { "name": "phil mohun", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "onchain expert, farcaster influencer, NODE director" },
+        { "name": "pindar van arman", "category": "genesis artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "cloudpainter agent" },
+        { "name": "primavera di filippi", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "thought leadership & governance" },
+        { "name": "simon de la rouviere", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "token experiments / thought leader" },
+        { "name": "simon hudson", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "botto pattern recognition" },
+        { "name": "henry pye", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "original protocol advisor" },
+        { "name": "mikey/ezra", "category": "genesis artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "culture agent" },
+        { "name": "tbd (genesis artist)", "category": "genesis artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "genesis artist placeholder" },
+        { "name": "tbd (small)", "category": "tbd", "amount": "1000000", "percentOfTotal": "0.10%", "notes": "tbd" },
+        { "name": "vanessa rosa", "category": "artist", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "Verdelis agent" },
+        { "name": "will papper", "category": "advisor", "amount": "5000000", "percentOfTotal": "0.50%", "notes": "tokenomics" }
+      ]
+    }
+  },
+
+  "tge": {
+    "date": "2026-01-15",
+    "timestamp": 1736899200,
+    "notes": "Token Generation Event - Jan 15, 2026 00:00:00 UTC"
+  },
+
+  "vestingPattern": {
+    "cliff": "12 months after TGE",
+    "cliffDate": "2027-01-15",
+    "cliffTimestamp": 1799971200,
+    "linear": "36 months after cliff",
+    "endDate": "2030-01-15",
+    "endTimestamp": 1894665600,
+    "totalDuration": "48 months",
+    "cliffPercent": "20%",
+    "streamPercent": "80%",
+    "applies_to": ["edenExisting", "edenReserve", "protocolTeam", "communityUpfront"]
+  },
+
+  "noVesting": {
+    "programmatic": "300M - uses airstream mechanism",
+    "superfluidStakers": "5M - separate 1-year streaming program",
+    "treasuryOperational": "OTC, LP, Presale, Aerodrome, Braindrops, Bright Moments, Superfluid DAO"
+  }
+}

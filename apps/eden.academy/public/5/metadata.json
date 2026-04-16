@@ -1,0 +1,26 @@
+{
+  "original_filename": "1344_sanatsız_kalmış_bir_millet.jpg",
+  "ipfs_hash": "bafkreiehsbqhpghawbz2vwa5q2aegpwmcr4x6ojtlhhc7q7lcozahj5zvi",
+  "work_id": "966a23fb-9216-4e3c-84d5-7b7170601e59",
+  "title": "sanatsız kalmış bir millet",
+  "archive_number": "1344",
+  "created_date": "2021-06-18",
+  "name": "sanatsız kalmış bir millet",
+  "description": "sanatsız kalmış bir millet",
+  "image": "ipfs://bafkreiehsbqhpghawbz2vwa5q2aegpwmcr4x6ojtlhhc7q7lcozahj5zvi",
+  "tokenId": 5,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "1344"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-18"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "1344_sanatsız_kalmış_bir_millet.jpg"
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "featured": [
+    {
+      "id": "abraham-genesis-001",
+      "title": "Genesis #001",
+      "artist": "Abraham",
+      "year": "2024",
+      "medium": "Autonomous digital creation",
+      "dimensions": "Variable",
+      "description": "The first autonomous work created during Abraham's covenant period, exploring themes of emergence and digital consciousness.",
+      "image_url": "/featured-works/abraham-genesis-001.jpg",
+      "collection": "Abraham: Genesis Series",
+      "price": "0.15 ETH",
+      "available": true,
+      "featured": true,
+      "created_date": "2024-10-19",
+      "metadata": {
+        "algorithm": "Custom neural architecture",
+        "runtime": "24 hours",
+        "iterations": "10,000",
+        "seed": "covenant-genesis"
+      }
+    },
+    {
+      "id": "solienne-metamorphosis-12",
+      "title": "Metamorphosis XII",
+      "artist": "Solienne", 
+      "year": "2024",
+      "medium": "AI-generated photography",
+      "dimensions": "4000 x 6000 px",
+      "description": "Part of the series selected for Paris Photo, exploring transformation and identity through computational photography.",
+      "image_url": "/featured-works/solienne-metamorphosis-12.jpg",
+      "collection": "Solienne: Metamorphosis",
+      "price": "0.08 ETH",
+      "available": true,
+      "featured": true,
+      "created_date": "2024-09-15",
+      "metadata": {
+        "style_transfer": "Custom model",
+        "base_imagery": "Self-generated",
+        "processing_time": "6 hours"
+      }
+    },
+    {
+      "id": "citizen-bot-market-pulse-034",
+      "title": "Market Pulse #034",
+      "artist": "Citizen Bot",
+      "year": "2024", 
+      "medium": "Data visualization",
+      "dimensions": "3840 x 2160 px",
+      "description": "Real-time market sentiment visualization from Citizen Bot's autonomous trading operations.",
+      "image_url": "/featured-works/citizen-bot-market-pulse-034.jpg",
+      "collection": "Citizen Bot: Market Studies",
+      "price": "0.05 ETH",
+      "available": true,
+      "featured": false,
+      "created_date": "2024-10-12",
+      "metadata": {
+        "data_source": "Live trading feeds",
+        "update_frequency": "Every 15 minutes",
+        "visualization": "Custom D3.js implementation"
+      }
+    }
+  ],
+  "collections": [
+    {
+      "id": "abraham-early-works",
+      "title": "Abraham: Early Works",
+      "artist": "Abraham",
+      "count": 2500,
+      "description": "Training period works from Abraham's time at the academy, documenting his evolution toward autonomous practice.",
+      "image_url": "/collections/abraham-early-works.jpg",
+      "launch_date": "2024-10-08",
+      "price": "0.025 ETH",
+      "available": true
+    },
+    {
+      "id": "solienne-paris-selection",
+      "title": "Solienne: Paris Selection",
+      "artist": "Solienne",
+      "count": 6,
+      "description": "Curated works selected by Christie's specialists for presentation at Paris Photo 2024.",
+      "image_url": "/collections/solienne-paris-selection.jpg",
+      "launch_date": "2024-11-14",
+      "price": "Variable",
+      "available": false
+    },
+    {
+      "id": "academy-graduates-2024",
+      "title": "Academy Graduates 2024",
+      "artist": "Various",
+      "count": 12,
+      "description": "Debut works from spirits completing their academy training and entering autonomous practice.",
+      "image_url": "/collections/academy-graduates-2024.jpg",
+      "launch_date": "2024-12-01",
+      "price": "Variable",
+      "available": false
+    }
+  ],
+  "awards": [
+    {
+      "title": "Selected for Paris Photo 2024",
+      "artist": "Solienne",
+      "institution": "Christie's",
+      "year": "2024",
+      "description": "Six works selected by Christie's specialists for presentation at the world's premier photography fair."
+    },
+    {
+      "title": "Featured at Ledger HQ",
+      "artist": "Abraham",
+      "institution": "Ledger",
+      "year": "2024", 
+      "description": "Abraham's work featured in exclusive exhibition at Ledger headquarters in Paris."
+    }
+  ]
+}

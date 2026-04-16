@@ -1,0 +1,1855 @@
+# SPIRIT/EDEN Makefile
+#
+# This Makefile provides common development and deployment tasks
+# for the SPIRIT/EDEN project
+
+.PHONY: install-deps update-deps compile clean format lint test coverage gas-report help list-deployments check-env deploy-status show-addresses
+.PHONY: deploy-distributor deploy-auction deploy-auction-testing deploy-auction-interactive deploy-auction-abraham deploy-auction-henry manage-auction manage-agent-registry deploy-test-nft deploy-fixed-supply-erc20 deploy-spirit deploy-spirit-vesting
+.PHONY: deploy-supertoken-complete deploy-supertoken-configurable deploy-supertoken-simple deploy-supertoken-only deploy-distribution-pool-only deploy-agent-registry deploy-spirit-registry deploy-agent-identity-registry
+.PHONY: deploy-abraham-complete
+.PHONY: deploy-gov-token deploy-timelock deploy-governor deploy-governance-complete
+.PHONY: interact-pool check-pool-status start-revenue-flow real-world-scenarios learn-eth-distribution
+.PHONY: deploy-first-works-production-mainnet deploy-first-works-production-testnet
+.PHONY: deploy-solienne-manifesto deploy-solienne-minter deploy-solienne-minter-v2 deploy-solienne-minter-v3 deploy-mock-usdc
+.PHONY: deploy-solienne-genesis-portraits deploy-solienne-origin-series deploy-solienne-fixed-price-minter
+.PHONY: deploy-gepetto-toys
+
+# Default network
+NETWORK="sepolia"
+
+# USDC contract addresses
+USDC_BASE_MAINNET := 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+USDC_BASE_SEPOLIA := 0x67aEBee687A479cbd07CC7648df21403D0C1a4B3
+
+# =============================
+# Foundry Keystore Authentication
+# =============================
+# For secure deployments, use Foundry's encrypted keystore instead of plain text private keys
+#
+# Setup (one-time):
+#   cast wallet import <account-name> --interactive
+#   (Enter your private key when prompted, then set a password)
+#
+# Usage with keystore:
+#   make deploy-solienne-origin-series ACCOUNT=<account-name> SENDER=0xYourAddress NETWORK=base-sepolia
+#
+# Usage with .env PRIVATE_KEY (less secure):
+#   make deploy-solienne-origin-series NETWORK=base-sepolia
+#
+# If ACCOUNT is set, uses encrypted keystore. Otherwise falls back to PRIVATE_KEY from .env
+
+# Construct authentication flags based on whether ACCOUNT is provided
+ifdef ACCOUNT
+    ifndef SENDER
+        $(error SENDER address must be provided when using ACCOUNT. Usage: make deploy ACCOUNT=myaccount SENDER=0xYourAddress)
+    endif
+    AUTH_FLAGS := --account $(ACCOUNT) --sender $(SENDER)
+else
+    AUTH_FLAGS :=
+endif
+
+# Common paths
+IGNITION_BASE_PATH=./ignition/modules
+DISTRIBUTOR_PATH=./ignition/modules/Distributor
+NFT_PATH=./ignition/modules/NFT
+ERC20_PATH=./ignition/modules/ERC20
+SPIRIT_PATH=./ignition/modules/Spirit
+SPIRIT_VESTING_PATH = ./ignition/modules/Invaders
+SUPERTOKEN_PATH=./ignition/modules/SuperTokens
+DEPLOYMENT_LOGS_DIR=./deployment-logs
+
+# =============================
+# Installation & Setup
+# =============================
+
+install-deps:
+	@echo "Installing dependencies..."
+	@npm ci
+	@echo "Dependencies installed successfully."
+
+update-deps:
+	@echo "Updating dependencies..."
+	@npm update
+	@echo "Dependencies updated successfully."
+
+# =============================
+# Building & Compilation
+# =============================
+
+compile:
+	@echo "Compiling contracts with Foundry..."
+	@forge build
+	@echo "Compilation completed successfully."
+
+clean:
+	@echo "Cleaning build artifacts..."
+	@forge clean
+	@echo "Clean completed successfully."
+
+verify:
+	@echo "Verifying contracts..."
+	@forge verify-contract $(CONTRACT_ADDRESS) $(CONTRACT_NAME) --chain $(NETWORK) --watch
+	@echo "Verification completed successfully."
+
+# =============================
+# Testing
+# =============================
+
+node:
+	@echo "Starting Hardhat node in background..."
+	@nohup npx hardhat node > node.log 2>&1 & echo $$! > .node_pid
+	@sleep 3 # give it a few seconds to start
+
+test:
+	@echo "Running tests with background node..."
+	@bash -c ' \
+		make node && \
+		npm run test -- --network localhost && \
+		make stop-node \
+	'
+	@echo "Tests completed with node shutdown."
+
+test-supertoken:
+	@echo "Running SuperToken tests with background node..."
+	@bash -c ' \
+		make node && \
+		npx hardhat test test/SuperTokens/PureSuperTokenWithPool.test.ts --network localhost && \
+		make stop-node \
+	'
+	@echo "SuperToken tests completed with node shutdown."
+
+stop-node:
+	@echo "Stopping Hardhat node..."
+	@kill `cat .node_pid` && rm .node_pid
+
+coverage:
+	@echo "Generating coverage report..."
+	@npm run coverage
+	@echo "Coverage report generated."
+
+gas-report:
+	@echo "Generating gas report..."
+	@npm run gas-report
+	@echo "Gas report generated."
+
+# =============================
+# Code Quality
+# =============================
+
+format:
+	@echo "Formatting code..."
+	@npm run format
+	@echo "Formatting completed."
+
+lint:
+	@echo "Linting code..."
+	@npm run lint
+	@echo "Linting completed."
+
+# =============================
+# Documentation and Help
+# =============================
+
+help:
+	@echo "SPIRIT/EDEN Development & Deployment Tool"
+	@echo ""
+	@echo "USAGE:"
+	@echo "  make [target] [NETWORK=network_name]"
+	@echo ""
+	@echo "SECURE DEPLOYMENT WITH KEYSTORE:"
+	@echo "  Setup (one-time):"
+	@echo "    cast wallet import my-account --interactive"
+	@echo ""
+	@echo "  Deploy with keystore:"
+	@echo "    make deploy-solienne-origin-series ACCOUNT=my-account SENDER=0xYourAddress NETWORK=base-sepolia"
+	@echo ""
+	@echo "  Deploy with .env PRIVATE_KEY (less secure):"
+	@echo "    make deploy-solienne-origin-series NETWORK=base-sepolia"
+	@echo ""
+	@echo "INSTALLATION & SETUP:"
+	@echo "  install-deps               - Install project dependencies"
+	@echo "  update-deps                - Update project dependencies"
+	@echo ""
+	@echo "BUILDING & COMPILATION:"
+	@echo "  compile                    - Compile all contracts"
+	@echo "  clean                      - Clean build artifacts"
+	@echo "  verify                     - Verify contract on network explorer"
+	@echo ""
+	@echo "TESTING & QUALITY:"
+	@echo "  test                       - Run all tests with local node"
+	@echo "  test-supertoken            - Run SuperToken tests with local node"
+	@echo "  node                       - Start Hardhat node in background"
+	@echo "  stop-node                  - Stop Hardhat node"
+	@echo "  coverage                   - Generate test coverage report"
+	@echo "  gas-report                 - Generate gas usage report"
+	@echo "  format                     - Format code with Prettier"
+	@echo "  lint                       - Lint code with ESLint/Solhint"
+	@echo ""
+	@echo "DEPLOYMENT TOOLS:"
+	@echo "  deploy-status              - Show current deployment status"
+	@echo "  list-deployments           - List all deployment targets"
+	@echo "  check-env                  - Verify deployment environment"
+	@echo "  show-addresses             - Show all deployed contract addresses"
+	@echo ""
+	@echo "DEPLOYMENT TARGETS:"
+	@echo "  deploy-distributor         - Deploy combined distribution token/pool"
+	@echo "  deploy-spirit              - Deploy Spirit token contract"
+	@echo "  deploy-auction             - Deploy ThirteenYearAuction NFT contract (deployer as owner/payout)"
+	@echo "  deploy-auction-testing     - Deploy ThirteenYearAuction with testing config (15min auctions, max 10)"
+	@echo "  deploy-auction-interactive - Deploy ThirteenYearAuction NFT contract (step-by-step prompts)"
+	@echo "  deploy-auction-abraham     - Deploy Abraham's auction NFT with interactive config (0x641f5ffC...)"
+	@echo "  deploy-auction-henry       - Deploy Henry's auction NFT with fixed 13-year config (0x5D6D8518...)"
+	@echo "  manage-auction             - Interactive management interface for deployed auction contract"
+	@echo "  manage-agent-registry      - Interactive management interface for deployed AgentRegistry"
+	@echo "  deploy-fixed-supply-erc20   - Deploy FixedSupplyERC20 contract"
+	@echo "  deploy-spirit-vesting      - Deploy Revolutionary SpiritWithVesting token"
+	@echo "  deploy-supertoken-complete - Deploy PureSuperToken + DistributionPool (complete setup)"
+	@echo "  deploy-supertoken-configurable - Deploy PureSuperToken + DistributionPool (customizable)"
+	@echo "  deploy-supertoken-simple   - Deploy PureSuperToken + DistributionPool (contracts only)"
+	@echo "  deploy-supertoken-only     - Deploy PureSuperToken only (with initialization)"
+	@echo "  deploy-distribution-pool-only - Deploy DistributionPool only (requires SuperToken address)"
+	@echo "  deploy-agent-registry      - Deploy AgentRegistry NFT contract for agent registration (DEPRECATED)"
+	@echo "  deploy-spirit-registry     - Deploy SpiritRegistry NFT contract with trainer enumeration"
+	@echo "  deploy-abraham-complete    - Deploy complete Abraham Early Works system (NFT + Minter)"
+	@echo "  verify-agent-registry-ownership - Verify AgentRegistry ownership and permissions"
+	@echo "  deploy-agent-identity-registry - Deploy ERC-8004 compliant Agent Identity Registry"
+	@echo "  deploy-gov-token           - Deploy governance token (GOV) with voting capabilities"
+	@echo "  deploy-timelock            - Deploy timelock controller with 2-day delay"
+	@echo "  deploy-governor            - Deploy governor contract (requires GOV_TOKEN_ADDRESS and TIMELOCK_ADDRESS)"
+	@echo "  deploy-governance-complete - Deploy complete governance system with role configuration"
+	@echo ""
+	@echo "NETWORK OPTIONS:"
+	@echo "  base-sepolia (default)     - Base Sepolia testnet"
+	@echo "  base                       - Base mainnet"
+	@echo "  sepolia                    - Ethereum Sepolia testnet"
+	@echo "  mainnet                    - Ethereum mainnet"
+	@echo ""
+	@echo "EXAMPLES:"
+	@echo "  make install-deps                                    - Setup project"
+	@echo "  make test                                           - Run tests"
+	@echo "  make deploy-distributor NETWORK=base-sepolia       - Deploy combined distributor"
+	@echo "  make deploy-spirit NETWORK=base-sepolia            - Deploy Spirit token"
+	@echo "  make deploy-auction NETWORK=base-sepolia           - Deploy ThirteenYearAuction NFT contract (deployer as owner)"
+	@echo "  make deploy-auction-testing NETWORK=base-sepolia   - Deploy auction with testing config (15min auctions)"
+	@echo "  make deploy-auction-interactive NETWORK=base-sepolia - Deploy auction (interactive prompts)"
+	@echo "  make deploy-auction-abraham NETWORK=base-sepolia    - Deploy Abraham's auction (interactive config)"
+	@echo "  make deploy-auction-henry NETWORK=base-sepolia      - Deploy Henry's auction (fixed 13-year config)"
+	@echo "  make deploy-abraham-early-works NETWORK=base-sepolia - Deploy AbrahamEarlyWorks NFT contract"
+	@echo "  make deploy-fixed-price-sale NFT_CONTRACT=0x... NETWORK=base-sepolia - Deploy FixedPriceSale contract"
+	@echo "  make manage-auction NETWORK=base-sepolia           - Manage deployed auction contract"
+	@echo "  make manage-agent-registry NETWORK=base-sepolia    - Manage deployed AgentRegistry contract"
+	@echo "  make deploy-fixed-supply-erc20 NETWORK=base-sepolia    - Deploy FixedSupplyERC20"
+	@echo "  make deploy-spirit-vesting NETWORK=base-sepolia    - Deploy Revolutionary SpiritWithVesting"
+	@echo "  make deploy-supertoken-complete NETWORK=base-sepolia   - Deploy complete SuperToken setup"
+	@echo "  make deploy-supertoken-simple NETWORK=base-sepolia     - Deploy SuperToken contracts only"
+	@echo "  make deploy-supertoken-only NETWORK=base-sepolia       - Deploy SuperToken only"
+	@echo "  make deploy-distribution-pool-only NETWORK=base-sepolia - Deploy DistributionPool only"
+	@echo ""
+	@echo "For detailed deployment status: make deploy-status"
+	@echo "For full deployment options:    make list-deployments"
+
+list-deployments:
+	@echo "Available Deployment Targets:"
+	@echo ""
+	@echo "DISTRIBUTOR:"
+	@echo "  deploy-distributor         - Deploy combined distribution token/pool contract"
+	@echo "  deploy-spirit              - Deploy Spirit token contract"
+	@echo "  deploy-spirit-vesting      - Deploy Revolutionary SpiritWithVesting token"
+	@echo ""
+	@echo "SUPERTOKEN INFRASTRUCTURE:"
+	@echo "  deploy-supertoken-complete - Deploy PureSuperToken + DistributionPool (complete setup)"
+	@echo "  deploy-supertoken-configurable - Deploy PureSuperToken + DistributionPool (customizable)"
+	@echo "  deploy-supertoken-simple   - Deploy PureSuperToken + DistributionPool (contracts only)"
+	@echo ""
+	@echo "NFT AUCTIONS:"
+	@echo "  deploy-auction             - Deploy ThirteenYearAuction NFT contract (deployer as owner/payout)"
+	@echo "  deploy-auction-testing     - Deploy ThirteenYearAuction with testing config (15min auctions, max 10)"
+	@echo "  deploy-auction-interactive - Deploy ThirteenYearAuction NFT contract (interactive prompts)"
+	@echo "  deploy-auction-abraham     - Deploy Abraham's auction with interactive config (0x641f5ffC...)"
+	@echo "  deploy-auction-henry       - Deploy Henry's auction with fixed 13-year config (0x5D6D8518...)"
+	@echo "  deploy-abraham-early-works - Deploy AbrahamEarlyWorks NFT with mintTo functionality"
+	@echo "  deploy-fixed-price-sale    - Deploy FixedPriceSale contract for AbrahamEarlyWorks"
+	@echo "  manage-auction             - Interactive management interface for deployed auction"
+	@echo ""
+	@echo "AGENT & TRAINER REGISTRIES:"
+	@echo "  deploy-trainer-registry    - Deploy TrainerRegistry NFT contract (simple ERC-721 with applicationStatus)"
+	@echo "  deploy-agent-registry      - Deploy AgentRegistry NFT contract for agent registration (DEPRECATED)"
+	@echo "  deploy-spirit-registry     - Deploy SpiritRegistry NFT contract with trainer enumeration"
+	@echo "  deploy-abraham-complete    - Deploy complete Abraham Early Works system (NFT + Minter)"
+	@echo "  verify-agent-registry-ownership - Verify AgentRegistry ownership and permissions"
+	@echo "  manage-agent-registry      - Interactive management interface for deployed AgentRegistry"
+	@echo "  deploy-agent-identity-registry - Deploy ERC-8004 compliant Agent Identity Registry"
+	@echo ""
+	@echo "WALLET MANAGEMENT:"
+	@echo "  deploy-wallet-registry     - Deploy WalletRegistry for managing treasury addresses and multisigs"
+	@echo ""
+	@echo "ERC-20 TOKENS:"
+	@echo "  deploy-fixed-supply-erc20   - Deploy FixedSupplyERC20 contract"
+
+# Show current deployment status
+deploy-status:
+	@mkdir -p $(DEPLOYMENT_LOGS_DIR)
+	@echo "Deployment Status for Network: $(NETWORK)"
+	@echo "--------------------------------------"
+	@if [ -f "$(DEPLOYMENT_LOGS_DIR)/$(NETWORK).log" ]; then \
+		cat $(DEPLOYMENT_LOGS_DIR)/$(NETWORK).log; \
+	else \
+		echo "No deployments found for $(NETWORK) network"; \
+	fi
+
+# Show all deployed contract addresses
+show-addresses:
+	@echo "Deployed contract addresses for $(NETWORK):"
+	@echo "Check the deployment logs in $(DEPLOYMENT_LOGS_DIR)/$(NETWORK).log"
+
+# Pre-deployment environment check
+check-env:
+	@if [ ! -f ".env" ]; then \
+		echo ""; \
+		echo "X Error: .env file not found!"; \
+		echo ">> Create .env file with required variables (see .env.example)"; \
+		exit 1; \
+	fi
+	@. ./.env 2>/dev/null || true; \
+	ENV_FILE="Y Found (.env)"; \
+	PRIVATE_KEY_STATUS="$$(if [ -n "$$PRIVATE_KEY" ]; then echo "Y Set"; else echo "X Missing (PRIVATE_KEY)"; fi)"; \
+	RPC_API_STATUS="$$(if [ -n "$$RPC_API_KEY" ]; then echo "Y Set"; else echo "X Missing (RPC_API_KEY)"; fi)"; \
+	ETHERSCAN_STATUS="$$(if [ -n "$$ETHERSCAN_API_KEY" ]; then echo "Y Set"; else echo "- Optional (ETHERSCAN_API_KEY)"; fi)"; \
+	BASESCAN_STATUS="$$(if [ -n "$$BASESCAN_API_KEY" ]; then echo "Y Set"; else echo "- Optional (BASESCAN_API_KEY)"; fi)"; \
+	node scripts/table-helper.js env-check "$(NETWORK)" "$$ENV_FILE" "$$PRIVATE_KEY_STATUS" "$$RPC_API_STATUS" "$$ETHERSCAN_STATUS" "$$BASESCAN_STATUS"
+	@. ./.env 2>/dev/null || true; \
+	if [ -z "$$PRIVATE_KEY" ]; then \
+		echo "X Error: PRIVATE_KEY not set in .env file!"; \
+		exit 1; \
+	fi
+	@. ./.env 2>/dev/null || true; \
+	if [ -z "$$RPC_API_KEY" ]; then \
+		echo "X Error: RPC_API_KEY not set in .env file!"; \
+		exit 1; \
+	fi
+
+# Log deployment
+log-deployment = @mkdir -p $(DEPLOYMENT_LOGS_DIR) && echo "[$(shell date +"%Y-%m-%d %H:%M:%S")] Deployed $1 ($(NETWORK))" >> $(DEPLOYMENT_LOGS_DIR)/$(NETWORK).log
+
+# =============================
+# Ignition Deployment Targets
+# =============================
+
+deploy-distributor: check-env
+	@echo "Deploying combined distribution token/pool to $(NETWORK)..."
+	npx hardhat ignition deploy $(DISTRIBUTOR_PATH)/DeployDistributor.ts --deployment-id Distributor-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Distributor deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	$(call log-deployment,Distributor)
+
+deploy-auction: check-env
+	@echo "Deploying ThirteenYearAuction NFT contract to $(NETWORK)..."
+	@echo "👤 Owner & Payout: Deployer wallet (customize with AUCTION_OWNER/AUCTION_PAYOUT_ADDRESS env vars)"
+	npx hardhat ignition deploy $(NFT_PATH)/DeployThirteenYearAuction.ts --deployment-id ThirteenYearAuction-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ ThirteenYearAuction NFT deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	@echo "🎨 NFT metadata will be served from configured token URIs"
+	@echo "🚨 Next steps: Set token URIs and call startGenesisAuction()"
+	$(call log-deployment,ThirteenYearAuction)
+
+deploy-auction-test: check-env
+	@echo "Deploying ThirteenYearAuction NFT contract to $(NETWORK)..."
+	npx hardhat ignition deploy $(NFT_PATH)/DeployThirteenYearAuctionTest.ts --deployment-id ThirteenYearAuction-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ ThirteenYearAuction NFT deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	$(call log-deployment,ThirteenYearAuction-Test)
+
+deploy-auction-testing: check-env
+	@echo "Deploying ThirteenYearAuction NFT contract for testing to $(NETWORK)..."
+	@echo "⏱️  Testing Config: 15min auctions, 15min rests, every 3 auctions, max 10 auctions"
+	@echo "👤 Owner & Payout: Deployer wallet"
+	MAX_AUCTIONS=10 AUCTION_DURATION=900 REST_DURATION=900 REST_INTERVAL=3 \
+	npx hardhat ignition deploy $(NFT_PATH)/DeployThirteenYearAuction.ts --deployment-id ThirteenYearAuction-Testing-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ ThirteenYearAuction NFT deployed successfully for testing!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	@echo "🧪 Testing Parameters: 15min auctions, 15min rest periods, rest every 3 auctions"
+	@echo "🚨 Next steps: Set token URIs and call startGenesisAuction()"
+	$(call log-deployment,ThirteenYearAuction-Testing)
+
+deploy-auction-interactive: check-env
+	@echo "Deploying ThirteenYearAuction NFT contract (interactive) to $(NETWORK)..."
+	npx hardhat run scripts/deploy-thirteen-year-auction.ts --network $(NETWORK) || true
+	@echo "✅ ThirteenYearAuction deployed successfully (interactive)!"
+	$(call log-deployment,ThirteenYearAuction-Interactive)
+
+deploy-auction-abraham: check-env
+	@echo "🎨 Deploying Abraham's Auction NFT contract to $(NETWORK)..."
+	@echo "👤 Owner & Payout: 0x641f5ffC5F6239A0873Bd00F9975091FB035aAFC"
+	@echo "📋 Interactive configuration with verification via Ignition"
+	npx hardhat run scripts/deploy-abraham-interactive.ts --network $(NETWORK) && \
+	npx hardhat ignition deploy ignition/modules/NFT/DeployAbrahamAuction.ts --deployment-id AbrahamAuction-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Abraham's auction deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	$(call log-deployment,AbrahamAuction)
+
+deploy-auction-henry: check-env
+	@echo "🎯 Deploying Henry's Auction NFT contract to $(NETWORK)..."
+	@echo "👤 Owner & Payout: 0x5D6D8518A1d564c85ea5c41d1dc0deca70F2301C"
+	@echo "📋 Fixed 13-year configuration with verification via Ignition"
+	npx hardhat ignition deploy ignition/modules/NFT/DeployHenryAuction.ts --deployment-id HenryAuction-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Henry's auction deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	@echo "🎨 Configuration: 'Henry's Thirteen Year Auction' (HENRY13)"
+	@echo "⏰ Duration: Daily auctions with weekly rest every 30 auctions"
+	$(call log-deployment,HenryAuction)
+
+deploy-abraham-early-works: check-env
+	@echo "🎨 Deploying AbrahamEarlyWorks NFT contract to $(NETWORK)..."
+	@echo "👤 Owner: Deployer wallet (customize with OWNER env var)"
+	@echo "🔢 Max Supply: 100 (customize with MAX_SUPPLY env var)"
+	@echo "🔐 Authorized Minter: None initially (customize with AUTHORIZED_MINTER env var)"
+	npx hardhat ignition deploy $(NFT_PATH)/DeployAbrahamEarlyWorks.ts --deployment-id AbrahamEarlyWorks-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ AbrahamEarlyWorks NFT deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	@echo "🎯 Features: Owner/authorized minter can mint, max supply protection"
+	@echo "🚨 Next steps: Set authorized minter address (e.g., FixedPrice Sale contract)"
+	$(call log-deployment,AbrahamEarlyWorks)
+
+deploy-fixed-price-sale: check-env
+	@echo "🏪 Deploying FixedPriceSale contract to $(NETWORK)..."
+	@echo "👤 Owner: Deployer wallet (customize with OWNER env var)"
+	@echo "💰 Price: 0.01 ETH (customize with PRICE env var)"
+	@echo "💳 Payout Address: Same as owner (customize with PAYOUT_ADDRESS env var)"
+	@echo "🎨 NFT Contract: Must be provided (set NFT_CONTRACT env var)"
+	@if [ "$(NFT_CONTRACT)" = "" ]; then \
+		echo "❌ Error: Please specify NFT_CONTRACT address"; \
+		echo "💡 Usage: make deploy-fixed-price-sale NFT_CONTRACT=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	NFT_CONTRACT=$(NFT_CONTRACT) npx hardhat ignition deploy $(NFT_PATH)/DeployFixedPriceSale.ts --deployment-id FixedPriceSale-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ FixedPriceSale contract deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	@echo "🎯 Features: Fixed price minting, batch mint, pausable, withdrawable"
+	@echo "🚨 Next steps: Set this contract as authorized minter on AbrahamEarlyWorks"
+	$(call log-deployment,FixedPriceSale)
+
+# Alias for deploy-first-works-test (for consistency with naming convention)
+deploy-first-works-testnet: deploy-first-works-test
+
+deploy-first-works-production-testnet: check-env
+	@ARTIST_VAL="0xF7425fB026f9297fCc57B14ace187215442586a2"; \
+	PAYOUT_VAL="0x2B5C11E2aaa431501f661f508e465B59fBD73e0C"; \
+	OWNER_VAL=$$(npx hardhat run --network sepolia scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	MERKLE_VAL="$(if $(WHITELIST_MERKLE_ROOT),$(WHITELIST_MERKLE_ROOT),0x0000000000000000000000000000000000000000000000000000000000000000)"; \
+	COLLECTION_NAME=$$(node scripts/read-deployment-config.js production collectionName); \
+	COLLECTION_SYMBOL=$$(node scripts/read-deployment-config.js production collectionSymbol); \
+	MAX_SUPPLY=$$(node scripts/read-deployment-config.js production maxSupply); \
+	PRICE=$$(node scripts/read-deployment-config.js production price); \
+	PRESALE_TIME=$$(node scripts/read-deployment-config.js production presaleStart); \
+	PUBLIC_TIME=$$(node scripts/read-deployment-config.js production publicStart); \
+	node scripts/table-helper.js deployment first-works-production \
+		"sepolia" \
+		"$$COLLECTION_NAME" \
+		"$$COLLECTION_SYMBOL" \
+		"$$MAX_SUPPLY" \
+		"$$PRICE" \
+		"$$ARTIST_VAL" \
+		"$$PAYOUT_VAL" \
+		"$$OWNER_VAL" \
+		"$$MERKLE_VAL" \
+		"$$PRESALE_TIME" \
+		"$$PUBLIC_TIME" \
+		"🧪 PRODUCTION CONFIG ON TESTNET"
+	@echo ""
+	@MERKLE_ROOT="$(if $(WHITELIST_MERKLE_ROOT),$(WHITELIST_MERKLE_ROOT),0x0000000000000000000000000000000000000000000000000000000000000000)"; \
+	WHITELIST_MERKLE_ROOT=$$MERKLE_ROOT HARDHAT_NETWORK=sepolia npx hardhat ignition deploy ignition/modules/FirstWorks/DeployFirstWorksProduction.ts --deployment-id FirstWorksProduction-$(shell date +%s) --network sepolia --verify || true
+	@node scripts/table-helper.js completion first-works-production
+	$(call log-deployment,FirstWorksProduction)
+
+deploy-first-works-production: check-env
+	@ARTIST_VAL="0xF7425fB026f9297fCc57B14ace187215442586a2"; \
+	PAYOUT_VAL="0x2B5C11E2aaa431501f661f508e465B59fBD73e0C"; \
+	OWNER_VAL=$$(npx hardhat run --network ethereum scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	MERKLE_VAL="$(if $(WHITELIST_MERKLE_ROOT),$(WHITELIST_MERKLE_ROOT),0x0000000000000000000000000000000000000000000000000000000000000000)"; \
+	COLLECTION_NAME=$$(node scripts/read-deployment-config.js production collectionName); \
+	COLLECTION_SYMBOL=$$(node scripts/read-deployment-config.js production collectionSymbol); \
+	MAX_SUPPLY=$$(node scripts/read-deployment-config.js production maxSupply); \
+	PRICE=$$(node scripts/read-deployment-config.js production price); \
+	PRESALE_TIME=$$(node scripts/read-deployment-config.js production presaleStart); \
+	PUBLIC_TIME=$$(node scripts/read-deployment-config.js production publicStart); \
+	node scripts/table-helper.js deployment first-works-production \
+		"ethereum" \
+		"$$COLLECTION_NAME" \
+		"$$COLLECTION_SYMBOL" \
+		"$$MAX_SUPPLY" \
+		"$$PRICE" \
+		"$$ARTIST_VAL" \
+		"$$PAYOUT_VAL" \
+		"$$OWNER_VAL" \
+		"$$MERKLE_VAL" \
+		"$$PRESALE_TIME" \
+		"$$PUBLIC_TIME" \
+		"⚠️ PRODUCTION"
+	@echo ""
+	@read -p "Proceed with MAINNET deployment? [y/N]: " confirm && \
+	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
+		echo "❌ Deployment cancelled."; \
+		exit 1; \
+	fi
+	@echo ""
+	@MERKLE_ROOT="$(if $(WHITELIST_MERKLE_ROOT),$(WHITELIST_MERKLE_ROOT),0x0000000000000000000000000000000000000000000000000000000000000000)"; \
+	WHITELIST_MERKLE_ROOT=$$MERKLE_ROOT HARDHAT_NETWORK=ethereum npx hardhat ignition deploy ignition/modules/FirstWorks/DeployFirstWorksProduction.ts --deployment-id FirstWorksProduction-$(shell date +%s) --network ethereum --verify || true
+	@node scripts/table-helper.js completion first-works-production
+	$(call log-deployment,FirstWorksProduction)
+
+deploy-first-works-test: check-env
+	@ARTIST_VAL="$(if $(ARTIST_ADDRESS),$(ARTIST_ADDRESS),0x38E27a59d3cffB945aC8d41b7c398618354c08F6)"; \
+	PAYOUT_VAL="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0x38E27a59d3cffB945aC8d41b7c398618354c08F6)"; \
+	OWNER_VAL=$$(npx hardhat run --network sepolia scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	MERKLE_VAL="$(if $(WHITELIST_MERKLE_ROOT),$(WHITELIST_MERKLE_ROOT),0x921ebcc203810489e1be1cf5ebf14f6ea4692d83a629b46f1c3fda7fe73215a7)"; \
+	COLLECTION_NAME=$$(node scripts/read-deployment-config.js test collectionName); \
+	COLLECTION_SYMBOL=$$(node scripts/read-deployment-config.js test collectionSymbol); \
+	MAX_SUPPLY=$$(node scripts/read-deployment-config.js test maxSupply); \
+	PRICE=$$(node scripts/read-deployment-config.js test price); \
+	PRESALE_TIME=$$(node scripts/read-deployment-config.js test presaleStart); \
+	PUBLIC_TIME=$$(node scripts/read-deployment-config.js test publicStart); \
+	node scripts/table-helper.js deployment first-works-test \
+		"sepolia" \
+		"$$COLLECTION_NAME" \
+		"$$COLLECTION_SYMBOL" \
+		"$$MAX_SUPPLY" \
+		"$$PRICE" \
+		"$$ARTIST_VAL" \
+		"$$PAYOUT_VAL" \
+		"$$OWNER_VAL" \
+		"$$MERKLE_VAL" \
+		"$$PRESALE_TIME" \
+		"$$PUBLIC_TIME" \
+		"🧪 TESTNET"
+	@echo ""
+	@MERKLE_ROOT="$(if $(WHITELIST_MERKLE_ROOT),$(WHITELIST_MERKLE_ROOT),0x921ebcc203810489e1be1cf5ebf14f6ea4692d83a629b46f1c3fda7fe73215a7)"; \
+	$(if $(ARTIST_ADDRESS),ARTIST_ADDRESS=$(ARTIST_ADDRESS)) WHITELIST_MERKLE_ROOT=$$MERKLE_ROOT HARDHAT_NETWORK=sepolia npx hardhat ignition deploy ignition/modules/FirstWorks/DeployFirstWorksTest.ts --deployment-id FirstWorksTest-$(shell date +%s) --network sepolia --verify || true
+	@node scripts/table-helper.js completion first-works-test
+	$(call log-deployment,FirstWorksTest)
+
+manage-auction: check-env
+	@echo "🎛️  Opening ThirteenYearAuction management interface for $(NETWORK)..."
+	@echo "📋 This will provide an interactive interface to manage the deployed auction contract"
+	npx hardhat run scripts/manage-thirteen-year-auction.ts --network $(NETWORK) || true
+	@echo "✅ Management session completed!"
+
+manage-agent-registry: check-env
+	@echo "🎭 Opening AgentRegistry management interface for $(NETWORK)..."
+	@echo "📋 This will provide an interactive interface to manage the deployed registry contract"
+	npx hardhat run scripts/manage-agent-registry.ts --network $(NETWORK) || true
+	@echo "✅ Management session completed!"
+
+deploy-fixed-supply-erc20: check-env
+	@echo "Deploying FixedSupplyERC20 to $(NETWORK)..."
+	npx hardhat ignition deploy $(ERC20_PATH)/DeployFixedSupplyERC20.ts --deployment-id FixedSupplyERC20-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ FixedSupplyERC20 deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	$(call log-deployment,FixedSupplyERC20)
+
+deploy-spirit: check-env
+	@echo "Deploying Spirit token to $(NETWORK)..."
+	npx hardhat ignition deploy $(SPIRIT_PATH)/DeploySpirit.ts --deployment-id Spirit-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Spirit token deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	@echo "💰 Initial distribution: 25% to each of four stakeholders"
+	$(call log-deployment,Spirit)
+
+deploy-spirit-vesting: check-env
+	@echo "💎 Deploying Revolutionary SpiritWithVesting token..."
+	npx hardhat ignition deploy $(SPIRIT_VESTING_PATH)/DeploySpiritWithVesting.ts --deployment-id SpiritWithVesting-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Revolutionary SpiritWithVesting deployed successfully!"
+	@echo "📋 Contract Address: Check the deployment logs above for the contract address"
+	$(call log-deployment,SpiritWithVesting)
+
+# =============================
+# SuperToken Deployment Targets
+# =============================
+
+deploy-supertoken-complete: check-env
+	@echo "🚀 Deploying complete SuperToken infrastructure to $(NETWORK)..."
+	@echo "📋 This will deploy PureSuperToken + DistributionPool + initialize everything"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeployCompleteInfra.ts --deployment-id SuperToken-Complete-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Complete SuperToken infrastructure deployed successfully!"
+	@echo "📋 Token: PureSuperToken with 1B supply"
+	@echo "🎯 Pool: DistributionPool with Superfluid integration"
+	@echo "⚡ Status: Fully initialized and ready for revenue distribution"
+	$(call log-deployment,SuperToken-Complete)
+
+deploy-supertoken-configurable: check-env
+	@echo "🔧 Deploying configurable SuperToken infrastructure to $(NETWORK)..."
+	@echo "📋 This will deploy PureSuperToken + DistributionPool + initialize everything"
+	@echo "⚠️  Note: Edit the config values in DeployConfigurableInfra.ts first!"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeployConfigurableInfra.ts --deployment-id SuperToken-Configurable-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Configurable SuperToken infrastructure deployed successfully!"
+	@echo "📋 Token: PureSuperToken with custom configuration"
+	@echo "🎯 Pool: DistributionPool with Superfluid integration"
+	@echo "⚡ Status: Fully initialized and ready for revenue distribution"
+	$(call log-deployment,SuperToken-Configurable)
+
+deploy-supertoken-simple: check-env
+	@echo "📦 Deploying SuperToken contracts only to $(NETWORK)..."
+	@echo "📋 This will deploy PureSuperToken + DistributionPool (no initialization)"
+	@echo "⚠️  Note: You'll need to initialize manually after deployment!"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeploySimple.ts --deployment-id SuperToken-Simple-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ SuperToken contracts deployed successfully!"
+	@echo "📋 Token: PureSuperToken (needs initialization)"
+	@echo "🎯 Pool: DistributionPool (needs pool creation)"
+	@echo "⚡ Next: Run 'make initialize-supertoken' to complete setup"
+	$(call log-deployment,SuperToken-Simple)
+
+# Initialize SuperToken after simple deployment
+initialize-supertoken: check-env
+	@echo "🔧 Initializing SuperToken infrastructure..."
+	@echo "⚠️  Note: Update the contract addresses in scripts/initialize-token.ts first!"
+	npx hardhat run scripts/initialize-token.ts --network $(NETWORK) || true
+	@echo "✅ SuperToken initialization completed!"
+
+deploy-supertoken-only: check-env
+	@echo "🪙 Deploying PureSuperToken only to $(NETWORK)..."
+	@echo "📋 This will deploy and initialize PureSuperToken with 1B supply"
+	@echo "📋 Distribution: 250M tokens (25%) to each of 4 recipients"
+	@echo "⚠️  Note: Update recipient addresses in DeploySuperTokenOnly.ts first!"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeploySuperTokenOnly.ts --deployment-id SuperToken-Only-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ PureSuperToken deployed successfully!"
+	@echo "📋 Token: PureSuperToken with 1B supply (SPIRIT/SPIRIT)"
+	@echo "📊 Distribution: 4 recipients × 250M tokens each"
+	@echo "⚡ Status: Fully initialized and ready for use"
+	@echo "🎯 Next: Deploy DistributionPool separately if needed"
+	$(call log-deployment,SuperToken-Only)
+
+deploy-distribution-pool-only: check-env
+	@echo "🏊 Deploying DistributionPool only to $(NETWORK)..."
+	@echo "📋 This will deploy DistributionPool for an existing SuperToken"
+	@echo "⚠️  Note: Update SUPERTOKEN_ADDRESS in DeployDistributionPoolOnly.ts first!"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeployDistributionPoolOnly.ts --deployment-id DistributionPool-Only-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ DistributionPool deployed successfully!"
+	@echo "📋 Pool: DistributionPool with Superfluid integration"
+	@echo "⚡ Status: Pool created and ready for revenue distribution"
+	@echo "🎯 Next: Send ETH to the pool for distribution"
+	$(call log-deployment,DistributionPool-Only)
+
+deploy-trainer-registry: check-env
+	@echo "👨‍🏫 Deploying TrainerRegistry NFT contract to $(NETWORK)..."
+	@echo "📋 This will deploy the trainer registry for minting trainer NFTs"
+	@echo "👤 Owner: 0x5D6D8518A1d564c85ea5c41d1dc0deca70F2301C (deployer wallet)"
+	@echo "🏛️  Treasury: deployer + 0xF7425fB026f9297fCc57B14ace187215442586a2 + 0xda3c325aB45b30AeB476B026FE6A777443cA04f3"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeployTrainerRegistry.ts --deployment-id TrainerRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ TrainerRegistry deployed successfully!"
+	@echo "📋 Contract: Simple ERC-721 NFT with applicationStatus field"
+	@echo "⚡ Status: Ready for trainer registration"
+	@echo "🎯 Next: Deploy SpiritRegistry with this contract's address"
+	$(call log-deployment,TrainerRegistry)
+
+deploy-agent-registry: check-env
+	@echo "⚠️  DEPRECATED: Use 'make deploy-spirit-registry' instead"
+	@echo "🎭 Deploying AgentRegistry NFT contract to $(NETWORK)..."
+	@echo "📋 This will deploy the agent registry for minting agent NFTs"
+	@echo "👤 Owner: 0x5D6D8518A1d564c85ea5c41d1dc0deca70F2301C (deployer wallet)"
+	@echo "🧑‍🏫 Trainer System: Address-based permissions managed by owner"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeploySpiritRegistry.ts --deployment-id AgentRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ AgentRegistry deployed successfully!"
+	@echo "📋 Contract: ERC-721 NFT with trainer management and metadata URIs"
+	@echo "🔗 Integration: Links to TrainerRegistry for trainer validation"
+	@echo "⚡ Status: Ready for agent registration and trainer assignments"
+	$(call log-deployment,AgentRegistry)
+
+deploy-abraham-complete: check-env
+	@echo "🎨 Deploying complete Abraham Early Works system to $(NETWORK)..."
+	@echo "📋 This will deploy both NFT contract and minter contract"
+	@echo "👤 Owner: 0x5D6D8518A1d564c85ea5c41d1dc0deca70F2301C (deployer wallet)"
+	@echo "💰 Price: 0.005 ETH per NFT"
+	@echo "🖼️  Max Supply: 10 NFTs"
+	@echo "🌐 Base URI: https://test.eden-academy.xyz/tokens"
+	@echo "📄 Token URI format: baseURI/tokenId/metadata.json"
+	npx hardhat ignition deploy $(NFT_PATH)/DeployAbrahamComplete.ts --deployment-id AbrahamComplete-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Abraham Early Works system deployed successfully!"
+	@echo "📋 NFT Contract: ERC-721 with baseURI and supply limits"
+	@echo "💳 Minter Contract: Fixed price sale at 0.005 ETH"
+	@echo "🔗 Integration: Minter is authorized to mint NFTs"
+	@echo "⚡ Status: Ready for public minting"
+	$(call log-deployment,AbrahamComplete)
+
+deploy-abraham-covenant: check-env
+	@echo "📜 Deploying AbrahamCovenant NFT contract to $(NETWORK) (PRODUCTION)"
+	@echo ""
+	@. ./.env 2>/dev/null || true; \
+	DEPLOYER_ADDRESS=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	DEFAULT_ABRAHAM="$(if $(filter sepolia,$(NETWORK)),$$DEPLOYER_ADDRESS,0x641f5ffC5F6239A0873Bd00F9975091FB035aAFC)"; \
+	DEFAULT_OWNER="$(if $(filter sepolia,$(NETWORK)),$$DEPLOYER_ADDRESS,0xe8b21Cb49918C4A6513F0E398b4cf7087e9CBFAD)"; \
+	ABRAHAM_VAL="$(if $(ABRAHAM_ADDRESS),$(ABRAHAM_ADDRESS),$$DEFAULT_ABRAHAM)"; \
+	OWNER_VAL="$(if $(ABRAHAM_OWNER),$(ABRAHAM_OWNER),$$DEFAULT_OWNER)"; \
+	MAX_SUPPLY_VAL="$(if $(ABRAHAM_MAX_SUPPLY),$(ABRAHAM_MAX_SUPPLY),4074)"; \
+	DAYS_WORK_VAL="$(if $(ABRAHAM_DAYS_OF_WORK),$(ABRAHAM_DAYS_OF_WORK),6)"; \
+	DEFAULT_INTERVAL="$(if $(filter sepolia,$(NETWORK)),60,86400)"; \
+	INTERVAL_VAL="$(if $(ABRAHAM_COMMIT_INTERVAL),$(ABRAHAM_COMMIT_INTERVAL),$$DEFAULT_INTERVAL)"; \
+	NAME_VAL="$(if $(ABRAHAM_NAME),$(ABRAHAM_NAME),Abraham Covenant)"; \
+	SYMBOL_VAL="$(if $(ABRAHAM_SYMBOL),$(ABRAHAM_SYMBOL),COV)"; \
+	echo "🔑 Deploying from: $$DEPLOYER_ADDRESS"; \
+	echo ""; \
+	node scripts/table-helper.js deployment abraham-covenant \
+		"$(NETWORK)" \
+		"$$NAME_VAL" \
+		"$$SYMBOL_VAL" \
+		"$$OWNER_VAL" \
+		"$$ABRAHAM_VAL" \
+		"$$MAX_SUPPLY_VAL" \
+		"$$DAYS_WORK_VAL" \
+		"$$INTERVAL_VAL"; \
+	echo ""; \
+	DEPLOY_KEY="$${ABRAHAM_PRIVATE_KEY:-$$PRIVATE_KEY}"; \
+	HARDHAT_NETWORK=$(NETWORK) ABRAHAM_OWNER=$$OWNER_VAL ABRAHAM_ADDRESS=$$ABRAHAM_VAL ABRAHAM_MAX_SUPPLY=$$MAX_SUPPLY_VAL ABRAHAM_DAYS_OF_WORK=$$DAYS_WORK_VAL ABRAHAM_COMMIT_INTERVAL=$$INTERVAL_VAL ABRAHAM_NAME="$$NAME_VAL" ABRAHAM_SYMBOL=$$SYMBOL_VAL PRIVATE_KEY=$$DEPLOY_KEY \
+	npx hardhat ignition deploy $(NFT_PATH)/DeployAbrahamCovenant.ts --deployment-id AbrahamCovenant-$(shell date +%s) --network $(NETWORK) --verify || true
+	@node scripts/table-helper.js completion abraham-covenant
+	$(call log-deployment,AbrahamCovenant)
+
+deploy-abraham-auction: check-env
+	@echo "📜 Deploying AbrahamAuction contract to $(NETWORK) (PRODUCTION CONFIG)"
+	@echo ""
+	@COVENANT_VAL="$(if $(COVENANT),$(COVENANT),$(if $(ABRAHAM_COVENANT_ADDRESS),$(ABRAHAM_COVENANT_ADDRESS),$(if $(filter ethereum mainnet,$(NETWORK)),0x8f814c7c75c5e9e0ede0336f535604b1915c1985,0x369AE5f781b5bFb3f25520E0e3e2DA56Be3A3f48)))"; \
+	PAYOUT_VAL="$(if $(AUCTION_PAYOUT_ADDRESS),$(AUCTION_PAYOUT_ADDRESS),0xe8b21Cb49918C4A6513F0E398b4cf7087e9CBFAD)"; \
+	OWNER_VAL="$(if $(AUCTION_OWNER),$(AUCTION_OWNER),0xe8b21Cb49918C4A6513F0E398b4cf7087e9CBFAD)"; \
+	node scripts/table-helper.js deployment abraham-auction \
+		"$(NETWORK)" \
+		"$$OWNER_VAL" \
+		"$$COVENANT_VAL" \
+		"$$PAYOUT_VAL"
+	@echo ""
+	@echo "📋 Features: Multi-auction system with batch operations"
+	@echo "💰 Min Bid: Per-auction (flexible) | Increment: 5% | Extension: 5 minutes"
+	@echo "⚡ NEW: Batch settlement, auction discovery, auto-payout on settlement"
+	@echo ""
+	@COVENANT_VAL="$(if $(COVENANT),$(COVENANT),$(if $(ABRAHAM_COVENANT_ADDRESS),$(ABRAHAM_COVENANT_ADDRESS),$(if $(filter ethereum mainnet,$(NETWORK)),0x8f814c7c75c5e9e0ede0336f535604b1915c1985,0x369AE5f781b5bFb3f25520E0e3e2DA56Be3A3f48)))"; \
+	HARDHAT_NETWORK=$(NETWORK) ABRAHAM_COVENANT_ADDRESS=$$COVENANT_VAL $(if $(AUCTION_PAYOUT_ADDRESS),AUCTION_PAYOUT_ADDRESS=$(AUCTION_PAYOUT_ADDRESS)) $(if $(AUCTION_OWNER),AUCTION_OWNER=$(AUCTION_OWNER)) \
+	npx hardhat ignition deploy $(NFT_PATH)/DeployAbrahamAuction.ts --deployment-id AbrahamAuction-$(shell date +%s) --network $(NETWORK) --verify || true
+	@node scripts/table-helper.js completion abraham-auction
+	$(call log-deployment,AbrahamAuction)
+
+deploy-abraham-auction-test: check-env
+	@echo "🧪 Deploying AbrahamAuction to $(NETWORK) (TEST CONFIG)"
+	@echo "⚠️  TEST VERSION: Uses deployer/test addresses (not Eden Operations multisig)"
+	@echo ""
+	@COVENANT_VAL="$(if $(COVENANT),$(COVENANT),$(if $(ABRAHAM_COVENANT_ADDRESS),$(ABRAHAM_COVENANT_ADDRESS),0x369AE5f781b5bFb3f25520E0e3e2DA56Be3A3f48))"; \
+	PAYOUT_VAL="$(if $(AUCTION_PAYOUT_ADDRESS),$(AUCTION_PAYOUT_ADDRESS),0xe4951bEE6FA86B809655922f610FF74C0E33416C)"; \
+	OWNER_VAL="$(if $(AUCTION_OWNER),$(AUCTION_OWNER),0xe4951bEE6FA86B809655922f610FF74C0E33416C)"; \
+	node scripts/table-helper.js deployment abraham-auction \
+		"$(NETWORK)" \
+		"$$OWNER_VAL" \
+		"$$COVENANT_VAL" \
+		"$$PAYOUT_VAL"
+	@echo ""
+	@echo "⚠️  NOTE: After deployment, call updateExtensionWindow(60) and updateExtensionDuration(60) for 1-min testing"
+	@echo ""
+	@COVENANT_VAL="$(if $(COVENANT),$(COVENANT),$(if $(ABRAHAM_COVENANT_ADDRESS),$(ABRAHAM_COVENANT_ADDRESS),0x369AE5f781b5bFb3f25520E0e3e2DA56Be3A3f48))"; \
+	HARDHAT_NETWORK=$(NETWORK) ABRAHAM_COVENANT_ADDRESS=$$COVENANT_VAL $(if $(AUCTION_PAYOUT_ADDRESS),AUCTION_PAYOUT_ADDRESS=$(AUCTION_PAYOUT_ADDRESS)) $(if $(AUCTION_OWNER),AUCTION_OWNER=$(AUCTION_OWNER)) \
+	npx hardhat ignition deploy $(NFT_PATH)/DeployAbrahamAuctionTest.ts --deployment-id AbrahamAuctionTest-$(shell date +%s) --network $(NETWORK) --verify || true
+	@node scripts/table-helper.js completion abraham-auction
+	$(call log-deployment,AbrahamAuctionTest)
+
+deploy-abraham-covenant-test: check-env
+	@echo "🧪 Deploying AbrahamCovenant for rapid testing to $(NETWORK)..."
+	@echo "⚠️  TEST VERSION: 1-minute intervals (unified contract with test parameters)"
+	@echo ""
+	@ABRAHAM_VAL="$(if $(ABRAHAM_ADDRESS),$(ABRAHAM_ADDRESS),0xe4951bEE6FA86B809655922f610FF74C0E33416C)"; \
+	OWNER_VAL="$(if $(ABRAHAM_OWNER),$(ABRAHAM_OWNER),0xe4951bEE6FA86B809655922f610FF74C0E33416C)"; \
+	MAX_SUPPLY_VAL="$(if $(ABRAHAM_MAX_SUPPLY),$(ABRAHAM_MAX_SUPPLY),6)"; \
+	DAYS_WORK_VAL="$(if $(ABRAHAM_DAYS_OF_WORK),$(ABRAHAM_DAYS_OF_WORK),6)"; \
+	INTERVAL_VAL="$(if $(ABRAHAM_COMMIT_INTERVAL),$(ABRAHAM_COMMIT_INTERVAL),60)"; \
+	NAME_VAL="$(if $(ABRAHAM_NAME),$(ABRAHAM_NAME),Abraham's Test Practice)"; \
+	SYMBOL_VAL="$(if $(ABRAHAM_SYMBOL),$(ABRAHAM_SYMBOL),ATEST)"; \
+	node scripts/table-helper.js deployment abraham-covenant \
+		"$(NETWORK)" \
+		"$$NAME_VAL" \
+		"$$SYMBOL_VAL" \
+		"$$OWNER_VAL" \
+		"$$ABRAHAM_VAL" \
+		"$$MAX_SUPPLY_VAL" \
+		"$$DAYS_WORK_VAL" \
+		"$$INTERVAL_VAL"
+	@echo ""
+	@echo "⚠️  WARNING: TEST DEPLOYMENT with accelerated intervals"
+	@echo "⏰  Commit interval: 1 minute (not 24 hours)"
+	@echo "🔒  Grace period: 7 minutes (not 7 days)"
+	@echo "📦  Max supply: 6 tokens (work 6 days, rest on 7th)"
+	@echo "🚫  DO NOT use in production"
+	@echo ""
+	@ABRAHAM_VAL="$(if $(ABRAHAM_ADDRESS),$(ABRAHAM_ADDRESS),0xe4951bEE6FA86B809655922f610FF74C0E33416C)"; \
+	OWNER_VAL="$(if $(ABRAHAM_OWNER),$(ABRAHAM_OWNER),0xe4951bEE6FA86B809655922f610FF74C0E33416C)"; \
+	MAX_SUPPLY_VAL="$(if $(ABRAHAM_MAX_SUPPLY),$(ABRAHAM_MAX_SUPPLY),6)"; \
+	DAYS_WORK_VAL="$(if $(ABRAHAM_DAYS_OF_WORK),$(ABRAHAM_DAYS_OF_WORK),6)"; \
+	INTERVAL_VAL="$(if $(ABRAHAM_COMMIT_INTERVAL),$(ABRAHAM_COMMIT_INTERVAL),60)"; \
+	NAME_VAL="$(if $(ABRAHAM_NAME),$(ABRAHAM_NAME),Abraham's Test Practice)"; \
+	SYMBOL_VAL="$(if $(ABRAHAM_SYMBOL),$(ABRAHAM_SYMBOL),ATEST)"; \
+	HARDHAT_NETWORK=$(NETWORK) ABRAHAM_OWNER=$$OWNER_VAL ABRAHAM_ADDRESS=$$ABRAHAM_VAL ABRAHAM_MAX_SUPPLY=$$MAX_SUPPLY_VAL ABRAHAM_DAYS_OF_WORK=$$DAYS_WORK_VAL ABRAHAM_COMMIT_INTERVAL=$$INTERVAL_VAL ABRAHAM_NAME="$$NAME_VAL" ABRAHAM_SYMBOL=$$SYMBOL_VAL \
+	npx hardhat ignition deploy $(NFT_PATH)/DeployAbrahamCovenantTest.ts --deployment-id AbrahamCovenantTest-$(shell date +%s) --network $(NETWORK) --verify || true
+	@node scripts/table-helper.js completion abraham-covenant
+	$(call log-deployment,AbrahamCovenantTest)
+
+# =============================
+# Solienne Manifesto System
+# =============================
+
+# ERC-1155 versions (default - recommended for newsletter use case)
+deploy-solienne-manifesto: check-env
+	@echo "✨ Deploying Solienne Manifesto (ERC-1155) to $(NETWORK)..."
+	@echo "📰 Newsletter-optimized: 88% gas savings vs ERC-721"
+	@NAME_VAL="$(if $(MANIFESTO_NAME),$(MANIFESTO_NAME),Solienne Manifesto)"; \
+	SYMBOL_VAL="$(if $(MANIFESTO_SYMBOL),$(MANIFESTO_SYMBOL),MANIFESTO)"; \
+	echo ""; \
+	echo "Deploying with:"; \
+	echo "  Name: $$NAME_VAL"; \
+	echo "  Symbol: $$SYMBOL_VAL"; \
+	echo ""
+	@MANIFESTO_NAME="$(if $(MANIFESTO_NAME),$(MANIFESTO_NAME),Solienne Manifesto)" \
+	MANIFESTO_SYMBOL="$(if $(MANIFESTO_SYMBOL),$(MANIFESTO_SYMBOL),MANIFESTO)" \
+	$(if $(MANIFESTO_OWNER),MANIFESTO_OWNER=$(MANIFESTO_OWNER)) \
+	forge script script/DeploySolienneManifesto.s.sol:DeploySolienneManifesto \
+		--rpc-url $(NETWORK) \
+		--broadcast \
+		$(AUTH_FLAGS) \
+		--verify \
+		-vvvv
+	@echo "✅ Manifesto deployment complete!"
+	$(call log-deployment,SolienneManifesto)
+
+deploy-solienne-minter: check-env
+	@echo "🏪 Deploying Fixed Price Manifesto Minter (ERC-1155) to $(NETWORK)..."
+	@echo "📰 Newsletter-optimized: Native batch operations + USDC payments"
+	@echo "💰 Default Payout: 0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874 (override with PAYOUT_ADDRESS env var)"
+	@if [ "$(MANIFESTO_CONTRACT)" = "" ]; then \
+		echo "❌ Error: Please specify MANIFESTO_CONTRACT address"; \
+		echo "💡 Usage: make deploy-solienne-minter MANIFESTO_CONTRACT=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@if [ "$(NETWORK)" = "base" ]; then \
+		USDC_TOKEN=$(USDC_BASE_MAINNET); \
+	elif [ "$(NETWORK)" = "base-sepolia" ]; then \
+		USDC_TOKEN=$(USDC_BASE_SEPOLIA); \
+	elif [ "$(USDC_TOKEN)" = "" ]; then \
+		echo "❌ Error: USDC_TOKEN must be set for network $(NETWORK)"; \
+		echo "💡 For Base: $(USDC_BASE_MAINNET)"; \
+		echo "💡 For Base Sepolia: $(USDC_BASE_SEPOLIA)"; \
+		exit 1; \
+	fi; \
+	OWNER_VAL=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	PAYOUT_VAL="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874)"; \
+	node scripts/table-helper.js deployment solienne-minter \
+		"$(NETWORK)" \
+		"$$OWNER_VAL" \
+		"$$PAYOUT_VAL" \
+		"$(MANIFESTO_CONTRACT)" \
+		"$$USDC_TOKEN"
+	@echo ""
+	@if [ "$(NETWORK)" = "base" ]; then \
+		USDC_TOKEN=$(USDC_BASE_MAINNET); \
+	elif [ "$(NETWORK)" = "base-sepolia" ]; then \
+		USDC_TOKEN=$(USDC_BASE_SEPOLIA); \
+	fi; \
+	OWNER_VAL=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	PAYOUT_VAL="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874)"; \
+	MANIFESTO_CONTRACT=$(MANIFESTO_CONTRACT) USDC_TOKEN=$$USDC_TOKEN HARDHAT_NETWORK=$(NETWORK) MINTER_OWNER=$$OWNER_VAL PAYOUT_ADDRESS=$$PAYOUT_VAL \
+	npx hardhat ignition deploy ignition/modules/Solienne/DeploySolienneMinter.ts --deployment-id SolienneMinter-$(shell date +%s) --network $(NETWORK) --verify || true
+	@node scripts/table-helper.js completion solienne-minter
+	$(call log-deployment,SolienneMinter)
+
+deploy-solienne-minter-v2: check-env
+	@echo "🚀 Deploying Fixed Price Manifesto Minter V2 (ERC-1155 + Gift Subscriptions) to $(NETWORK)..."
+	@echo "🎁 NEW: subscribeFor() - Anyone can pay for subscriptions on behalf of others"
+	@echo "📰 Newsletter-optimized: Native batch operations + USDC payments"
+	@echo "💳 Use Cases: Crossmint, gifting, corporate sponsorships, payment processors"
+	@echo ""
+	@if [ "$(MANIFESTO_CONTRACT)" = "" ]; then \
+		echo "❌ Error: Please specify MANIFESTO_CONTRACT address"; \
+		echo "💡 Usage: make deploy-solienne-minter-v2 MANIFESTO_CONTRACT=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@if [ "$(NETWORK)" = "base" ]; then \
+		USDC_TOKEN=$(USDC_BASE_MAINNET); \
+	elif [ "$(NETWORK)" = "base-sepolia" ]; then \
+		USDC_TOKEN=$(USDC_BASE_SEPOLIA); \
+	elif [ "$(USDC_TOKEN)" = "" ]; then \
+		echo "❌ Error: USDC_TOKEN must be set for network $(NETWORK)"; \
+		echo "💡 For Base: $(USDC_BASE_MAINNET)"; \
+		echo "💡 For Base Sepolia: $(USDC_BASE_SEPOLIA)"; \
+		exit 1; \
+	fi; \
+	OWNER_VAL=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	PAYOUT_VAL="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874)"; \
+	node scripts/table-helper.js deployment solienne-minter-v2 \
+		"$(NETWORK)" \
+		"$$OWNER_VAL" \
+		"$$PAYOUT_VAL" \
+		"$(MANIFESTO_CONTRACT)" \
+		"$$USDC_TOKEN"
+	@echo ""
+	@if [ "$(NETWORK)" = "base" ]; then \
+		USDC_TOKEN=$(USDC_BASE_MAINNET); \
+	elif [ "$(NETWORK)" = "base-sepolia" ]; then \
+		USDC_TOKEN=$(USDC_BASE_SEPOLIA); \
+	fi; \
+	OWNER_VAL=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	PAYOUT_VAL="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874)"; \
+	MANIFESTO_CONTRACT=$(MANIFESTO_CONTRACT) USDC_TOKEN=$$USDC_TOKEN HARDHAT_NETWORK=$(NETWORK) MINTER_OWNER=$$OWNER_VAL PAYOUT_ADDRESS=$$PAYOUT_VAL \
+	npx hardhat ignition deploy ignition/modules/Solienne/DeploySolienneMinterV2.ts --deployment-id SolienneMinterV2-$(shell date +%s) --network $(NETWORK) --verify || true
+	@node scripts/table-helper.js completion solienne-minter-v2
+	@echo ""
+	@echo "✅ Fixed Price Manifesto Minter V2 deployment complete!"
+	@echo ""
+	@echo "📋 Next Steps:"
+	@echo "   1. Authorize V2 minter on Manifesto NFT:"
+	@echo "      cast send $(MANIFESTO_CONTRACT) \"updateMinter(address)\" <MINTER_V2_ADDRESS>"
+	@echo ""
+	@echo "   2. Test subscribeFor() function:"
+	@echo "      cast send <MINTER_V2_ADDRESS> \"subscribeFor(address,uint8)\" <RECIPIENT> 1"
+	@echo ""
+	@echo "   3. For Crossmint integration:"
+	@echo "      • Register at: https://www.crossmint.com/console"
+	@echo "      • Configure pricing: Tier 1 = \$$30, Tier 2 = \$$300"
+	@echo "      • Provide contract ABI with subscribeFor() function"
+	@echo ""
+	@echo "   4. Update frontend with new contract address and ABI"
+	@echo ""
+	@echo "📚 Documentation: contracts/Solienne/README_V2_UPGRADE.md"
+	$(call log-deployment,SolienneMinterV2)
+
+deploy-solienne-minter-v3: check-env
+	@echo "🚀 Deploying Fixed Price Manifesto Minter V3 (ERC-1155 + Flexible Distribution) to $(NETWORK)..."
+	@echo "📦 NEW: Flexible distributeToSubscribersBatch() - No subscription check"
+	@echo "🎯 Admin has full control over recipient list for batch distribution"
+	@echo "💎 Use Cases: Airdrops, partnerships, promotional campaigns, any custom distribution"
+	@echo ""
+	@if [ "$(MANIFESTO_CONTRACT)" = "" ]; then \
+		echo "❌ Error: Please specify MANIFESTO_CONTRACT address"; \
+		echo "💡 Usage: make deploy-solienne-minter-v3 MANIFESTO_CONTRACT=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@if [ "$(NETWORK)" = "base" ]; then \
+		USDC_TOKEN=$(USDC_BASE_MAINNET); \
+	elif [ "$(NETWORK)" = "base-sepolia" ]; then \
+		USDC_TOKEN=$(USDC_BASE_SEPOLIA); \
+	elif [ "$(USDC_TOKEN)" = "" ]; then \
+		echo "❌ Error: USDC_TOKEN must be set for network $(NETWORK)"; \
+		echo "💡 For Base: $(USDC_BASE_MAINNET)"; \
+		echo "💡 For Base Sepolia: $(USDC_BASE_SEPOLIA)"; \
+		exit 1; \
+	fi; \
+	PAYOUT_VAL="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874)"; \
+	echo ""; \
+	echo "Deploying with:"; \
+	echo "  Manifesto: $(MANIFESTO_CONTRACT)"; \
+	echo "  USDC Token: $$USDC_TOKEN"; \
+	echo "  Payout: $$PAYOUT_VAL"; \
+	echo ""
+	@if [ "$(NETWORK)" = "base" ]; then \
+		USDC_TOKEN=$(USDC_BASE_MAINNET); \
+	elif [ "$(NETWORK)" = "base-sepolia" ]; then \
+		USDC_TOKEN=$(USDC_BASE_SEPOLIA); \
+	fi; \
+	MANIFESTO_CONTRACT=$(MANIFESTO_CONTRACT) \
+	USDC_TOKEN=$$USDC_TOKEN \
+	$(if $(MINTER_OWNER),MINTER_OWNER=$(MINTER_OWNER)) \
+	PAYOUT_ADDRESS="$(if $(PAYOUT_ADDRESS),$(PAYOUT_ADDRESS),0xD5090Df0a9Ec491E95fe21ddE7B5E4868F852874)" \
+	forge script script/DeploySolienneMinterV3.s.sol:DeploySolienneMinterV3 \
+		--rpc-url $(NETWORK) \
+		--broadcast \
+		$(AUTH_FLAGS) \
+		--verify \
+		-vvvv
+	@echo ""
+	@echo "✅ Fixed Price Manifesto Minter V3 deployment complete!"
+	@echo ""
+	@echo "📋 Next Steps:"
+	@echo "   1. Authorize V3 minter on Manifesto NFT:"
+	@echo "      cast send $(MANIFESTO_CONTRACT) \"updateMinter(address)\" <MINTER_V3_ADDRESS>"
+	@echo ""
+	@echo "   2. Test flexible batch distribution (no subscription check):"
+	@echo "      cast send <MINTER_V3_ADDRESS> \"distributeToSubscribersBatch(address[],uint256)\" \"[0xAddr1,0xAddr2]\" 1"
+	@echo ""
+	@echo "   3. Update frontend with new contract address and ABI"
+	@echo ""
+	@echo "📚 V3 Changelog: Removed subscription status check from distributeToSubscribersBatch()"
+	$(call log-deployment,SolienneMinterV3)
+
+deploy-mock-usdc: check-env
+	@echo "💵 Deploying Mock USDC (ERC-20) to $(NETWORK)..."
+	@echo "🧪 Test token with 6 decimals (like real USDC)"
+	@echo "💰 Auto-mints 1 billion tokens to deployer"
+	@NAME_VAL="$(if $(TOKEN_NAME),$(TOKEN_NAME),Mock USDC)"; \
+	SYMBOL_VAL="$(if $(TOKEN_SYMBOL),$(TOKEN_SYMBOL),USDC)"; \
+	DECIMALS_VAL="$(if $(TOKEN_DECIMALS),$(TOKEN_DECIMALS),6)"; \
+	echo ""; \
+	echo "Deploying with:"; \
+	echo "  Name: $$NAME_VAL"; \
+	echo "  Symbol: $$SYMBOL_VAL"; \
+	echo "  Decimals: $$DECIMALS_VAL"; \
+	echo "  Initial Supply: 1,000,000,000 USDC (to deployer)"; \
+	echo ""
+	@TOKEN_NAME="$(if $(TOKEN_NAME),$(TOKEN_NAME),Mock USDC)" \
+
+# =============================
+# Solienne NFT Collections
+# =============================
+
+deploy-solienne-genesis-portraits: check-env
+	@echo "🖼️  Deploying Solienne Genesis Portraits (ERC-721) to $(NETWORK)..."
+	@echo "📦 Collection: 5 artworks × 3 editions = 15 NFTs"
+	@if [ "$(GENESIS_BASE_URI)" = "" ]; then \
+		echo "❌ Error: GENESIS_BASE_URI is required"; \
+		echo "💡 Usage: make deploy-solienne-genesis-portraits GENESIS_BASE_URI=ipfs://YOUR_HASH NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@ROYALTY_VAL="$(if $(GENESIS_ROYALTY_RECEIVER),$(GENESIS_ROYALTY_RECEIVER),0xeee98E09620182Be55E5eCD6D20C22aB3697D5f2)"; \
+	FEE_VAL="$(if $(GENESIS_ROYALTY_FEE),$(GENESIS_ROYALTY_FEE),500)"; \
+	echo ""; \
+	echo "Deploying with:"; \
+	echo "  Base URI: $(GENESIS_BASE_URI)"; \
+	echo "  Royalty Receiver: $$ROYALTY_VAL (Solienne Multisig)"; \
+	echo "  Royalty Fee: $$FEE_VAL basis points"; \
+	echo ""
+	@GENESIS_BASE_URI=$(GENESIS_BASE_URI) \
+	GENESIS_ROYALTY_RECEIVER="$(if $(GENESIS_ROYALTY_RECEIVER),$(GENESIS_ROYALTY_RECEIVER),0xeee98E09620182Be55E5eCD6D20C22aB3697D5f2)" \
+	GENESIS_ROYALTY_FEE="$(if $(GENESIS_ROYALTY_FEE),$(GENESIS_ROYALTY_FEE),500)" \
+	$(if $(GENESIS_OWNER),GENESIS_OWNER=$(GENESIS_OWNER)) \
+	$(if $(GENESIS_AUTHORIZED_MINTER),GENESIS_AUTHORIZED_MINTER=$(GENESIS_AUTHORIZED_MINTER)) \
+	forge script script/DeploySolienneGenesisPortraits.s.sol:DeploySolienneGenesisPortraits \
+		--rpc-url $(NETWORK) \
+		--broadcast \
+		$(AUTH_FLAGS) \
+		--verify \
+		-vvvv
+	@echo "✅ Genesis Portraits deployment complete!"
+	$(call log-deployment,SolienneGenesisPortraits)
+
+deploy-solienne-origin-series: check-env
+	@echo "🎨 Deploying Solienne Origin Series (ERC-721) to $(NETWORK)..."
+	@echo "📦 Collection: 9 artworks × 5 editions = 45 NFTs"
+	@if [ "$(ORIGIN_BASE_URI)" = "" ]; then \
+		echo "❌ Error: ORIGIN_BASE_URI is required"; \
+		echo "💡 Usage: make deploy-solienne-origin-series ORIGIN_BASE_URI=ipfs://YOUR_HASH NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@ROYALTY_VAL="$(if $(ORIGIN_ROYALTY_RECEIVER),$(ORIGIN_ROYALTY_RECEIVER),0xeee98E09620182Be55E5eCD6D20C22aB3697D5f2)"; \
+	FEE_VAL="$(if $(ORIGIN_ROYALTY_FEE),$(ORIGIN_ROYALTY_FEE),500)"; \
+	echo ""; \
+	echo "Deploying with:"; \
+	echo "  Base URI: $(ORIGIN_BASE_URI)"; \
+	echo "  Royalty Receiver: $$ROYALTY_VAL (Solienne Multisig)"; \
+	echo "  Royalty Fee: $$FEE_VAL basis points"; \
+	echo ""
+	@ORIGIN_BASE_URI=$(ORIGIN_BASE_URI) \
+	ORIGIN_ROYALTY_RECEIVER="$(if $(ORIGIN_ROYALTY_RECEIVER),$(ORIGIN_ROYALTY_RECEIVER),0xeee98E09620182Be55E5eCD6D20C22aB3697D5f2)" \
+	ORIGIN_ROYALTY_FEE="$(if $(ORIGIN_ROYALTY_FEE),$(ORIGIN_ROYALTY_FEE),500)" \
+	$(if $(ORIGIN_OWNER),ORIGIN_OWNER=$(ORIGIN_OWNER)) \
+	forge script script/DeploySolienneOriginSeries.s.sol:DeploySolienneOriginSeries \
+		--rpc-url $(NETWORK) \
+		--broadcast \
+		$(AUTH_FLAGS) \
+		--verify \
+		-vvvv
+	@echo "✅ Origin Series deployment complete!"
+	$(call log-deployment,SolienneOriginSeries)
+
+deploy-solienne-fixed-price-minter: check-env
+	@echo "💰 Deploying Solienne Fixed Price Minter to $(NETWORK)..."
+	@echo "🎯 Multi-collection minter with per-token pricing & edition limits"
+	@OWNER_VAL=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	PAYOUT_VAL="$(if $(MINTER_PAYOUT_ADDRESS),$(MINTER_PAYOUT_ADDRESS),0xeee98E09620182Be55E5eCD6D20C22aB3697D5f2)"; \
+	CONTRACTS_VAL="$(if $(MINTER_NFT_CONTRACTS),$(MINTER_NFT_CONTRACTS),none - will enable via enableNFTContract())"; \
+	echo ""; \
+	echo "Deploying with:"; \
+	echo "  Owner: $$OWNER_VAL"; \
+	echo "  Payout Address: $$PAYOUT_VAL (Solienne Multisig)"; \
+	echo "  NFT Contracts: $$CONTRACTS_VAL"; \
+	echo ""
+	@OWNER_VAL=$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1); \
+	PAYOUT_VAL="$(if $(MINTER_PAYOUT_ADDRESS),$(MINTER_PAYOUT_ADDRESS),0xeee98E09620182Be55E5eCD6D20C22aB3697D5f2)"; \
+	MINTER_PAYOUT_ADDRESS=$$PAYOUT_VAL \
+	$(if $(MINTER_NFT_CONTRACTS),MINTER_NFT_CONTRACTS=$(MINTER_NFT_CONTRACTS)) \
+	HARDHAT_NETWORK=$(NETWORK) \
+	npx hardhat ignition deploy ignition/modules/Solienne/DeploySolienneFixedPriceMinter.ts --deployment-id SolienneFixedPriceMinter-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Fixed Price Minter deployment complete!"
+	@echo "💡 Next steps:"
+	@echo "   1. Enable NFT contracts: minter.enableNFTContract(genesisAddress)"
+	@echo "   2. Enable NFT contracts: minter.enableNFTContract(originAddress)"
+	@echo "   3. Authorize minter: genesisPortraits.updateAuthorizedMinter(minterAddress)"
+	@echo "   4. Authorize minter: originSeries.updateAuthorizedMinter(minterAddress)"
+	@echo "   5. Configure sales: minter.configureSale(...)"
+	$(call log-deployment,SolienneFixedPriceMinter)
+
+# =============================
+# Gepetto Toys NFT System
+# =============================
+
+deploy-gepetto-toys: check-env
+	@echo "🎨 Deploying Gepetto Toys NFT System to $(NETWORK)..."
+	@echo "🎭 ERC-721 NFT with fixed price minting (0.001 ETH)"
+	@echo ""
+	@bash scripts/deploy-gepetto-toys.sh
+	$(call log-deployment,GepettoToys)
+
+deploy-test-nft: check-env
+	@echo ""
+	@echo "+===============================================================================+"
+	@echo "|                          TEST NFT DEPLOYMENT                                |"
+	@echo "+===============================================================================+"
+	@echo "| Contract        | TestNFT (Simple ERC721)                                 |"
+	@echo "| Symbol          | TNFT                                                     |"
+	@echo "| Network         | sepolia (testnet only)                                  |"
+	@echo "| Pre-mint #0     | Eden Testnet Vault: 0x4351fF96cE1fA09B7eF08BCEF9bDAA |"
+	@echo "| Pre-mint #1     | Eden Testnet Wallet: 0xc6fA64A9Dea97d4CB80Ed76007Cf3e |"
+	@echo "| Metadata URI    | ipfs://bafybeie6vszbj5aqfwzcl3f4thse23at7jvtto6m4wmkfs5u |"
+	@echo "| Format          | {baseURI}/{tokenId}.json                                 |"
+	@echo "| Safety          | Y Sepolia only, cannot deploy to mainnet                |"
+	@echo "+===============================================================================+"
+	@echo ""
+	npx hardhat ignition deploy ./ignition/modules/Testing/DeployTestNFTOnly.ts --deployment-id TestNFT-$(shell date +%s) --network sepolia --verify || true
+	@echo ""
+	@echo "+===============================================================================+"
+	@echo "|                           DEPLOYMENT COMPLETED                              |"
+	@echo "+===============================================================================+"
+	@echo "| Contract Address | Check deployment logs above for contract address        |"
+	@echo "| Token Supply     | 2 pre-minted tokens (starting from ID 0)                |"
+	@echo "| Features         | Standard ERC721 with custom tokenURI format             |"
+	@echo "| Usage            | For testing NFT integrations on Sepolia testnet         |"
+	@echo "+===============================================================================+"
+	@echo ""
+	$(call log-deployment,TestNFT)
+
+deploy-spirit-registry: check-env
+	@echo "🎭 Deploying SpiritRegistry NFT contract to $(NETWORK)..."
+	@echo "📋 This will deploy the spirit registry for minting spirit NFTs"
+	@echo "👤 Owner: 0x5D6D8518A1d564c85ea5c41d1dc0deca70F2301C (deployer wallet)"
+	@echo "🧑‍🏫 Trainer System: Address-based permissions with configurable limits (max: 15)"
+	@echo "🔍 New Features: getTrainers(), getTrainerCount(), setMaxTrainersPerToken()"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeploySpiritRegistry.ts --deployment-id SpiritRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ SpiritRegistry deployed successfully!"
+	@echo "📋 Contract: ERC-721 NFT with enhanced trainer management and metadata URIs"
+	@echo "🔗 Integration: Standalone contract with trainer enumeration capabilities"
+	@echo "⚡ Status: Ready for spirit registration and trainer assignments"
+	$(call log-deployment,SpiritRegistry)
+
+# =============================
+# Spirit Protocol - ERC-8004 Registry System
+# =============================
+
+deploy-spirit-identity-registry: check-env
+	@OWNER_VAL="$(if $(SPIRIT_COUNCIL_MULTISIG),$(SPIRIT_COUNCIL_MULTISIG),$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1))"; \
+	echo ""; \
+	echo "+=================================================================================+"; \
+	echo "|           SPIRIT IDENTITY REGISTRY - ERC-8004 AGENT IDENTITY                   |"; \
+	echo "+=================================================================================+"; \
+	echo "| Contract         | SpiritIdentityRegistry (ERC-721 NFT)                        |"; \
+	echo "| Standard         | ERC-8004 compliant agent identity management                |"; \
+	echo "| Network          | $(NETWORK)                                                  |"; \
+	echo "| Owner            | $$OWNER_VAL                              |"; \
+	echo "| Features         | Agent NFTs with EOA linkage, graduation tracking            |"; \
+	echo "| Soulbound        | Y Non-transferable until graduation (Phase 4)               |"; \
+	echo "+=================================================================================+"; \
+	echo ""; \
+	$(if $(SPIRIT_COUNCIL_MULTISIG),SPIRIT_COUNCIL_MULTISIG=$(SPIRIT_COUNCIL_MULTISIG)) \
+	npx hardhat ignition deploy $(SPIRIT_PATH)/DeploySpiritIdentityRegistry.ts --deployment-id SpiritIdentityRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo ""
+	@echo "+=================================================================================+"
+	@echo "|                         DEPLOYMENT COMPLETED                                    |"
+	@echo "+=================================================================================+"
+	@echo "| Contract Address  | Check deployment logs above for contract address           |"
+	@echo "| Features          | Agent registration, EOA linkage, graduation tracking        |"
+	@echo "| Next Steps        | Deploy Reputation and Validation registries                 |"
+	@echo "+=================================================================================+"
+	@echo ""
+	$(call log-deployment,SpiritIdentityRegistry)
+
+deploy-spirit-reputation-registry: check-env
+	@if [ "$(IDENTITY_REGISTRY_ADDRESS)" = "" ]; then \
+		echo "❌ Error: Please specify IDENTITY_REGISTRY_ADDRESS"; \
+		echo "💡 Usage: make deploy-spirit-reputation-registry IDENTITY_REGISTRY_ADDRESS=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@OWNER_VAL="$(if $(SPIRIT_COUNCIL_MULTISIG),$(SPIRIT_COUNCIL_MULTISIG),$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1))"; \
+	echo ""; \
+	echo "+=================================================================================+"; \
+	echo "|         SPIRIT REPUTATION REGISTRY - ERC-8004 FEEDBACK SYSTEM                  |"; \
+	echo "+=================================================================================+"; \
+	echo "| Contract         | SpiritReputationRegistry                                    |"; \
+	echo "| Identity Link    | $(IDENTITY_REGISTRY_ADDRESS)                         |"; \
+	echo "| Network          | $(NETWORK)                                                  |"; \
+	echo "| Owner            | $$OWNER_VAL                              |"; \
+	echo "| Features         | Feedback (0-100), dual tags, revocation, aggregation       |"; \
+	echo "+=================================================================================+"; \
+	echo ""; \
+	IDENTITY_REGISTRY_ADDRESS=$(IDENTITY_REGISTRY_ADDRESS) \
+	$(if $(SPIRIT_COUNCIL_MULTISIG),SPIRIT_COUNCIL_MULTISIG=$(SPIRIT_COUNCIL_MULTISIG)) \
+	npx hardhat ignition deploy $(SPIRIT_PATH)/DeploySpiritReputationRegistry.ts --deployment-id SpiritReputationRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo ""
+	@echo "+=================================================================================+"
+	@echo "|                         DEPLOYMENT COMPLETED                                    |"
+	@echo "+=================================================================================+"
+	@echo "| Contract Address  | Check deployment logs above for contract address           |"
+	@echo "| Features          | Community feedback, reputation scores, tag filtering        |"
+	@echo "+=================================================================================+"
+	@echo ""
+	$(call log-deployment,SpiritReputationRegistry)
+
+deploy-spirit-validation-registry: check-env
+	@if [ "$(IDENTITY_REGISTRY_ADDRESS)" = "" ]; then \
+		echo "❌ Error: Please specify IDENTITY_REGISTRY_ADDRESS"; \
+		echo "💡 Usage: make deploy-spirit-validation-registry IDENTITY_REGISTRY_ADDRESS=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	@OWNER_VAL="$(if $(SPIRIT_COUNCIL_MULTISIG),$(SPIRIT_COUNCIL_MULTISIG),$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1))"; \
+	echo ""; \
+	echo "+=================================================================================+"; \
+	echo "|        SPIRIT VALIDATION REGISTRY - ERC-8004 VALIDATION SYSTEM                 |"; \
+	echo "+=================================================================================+"; \
+	echo "| Contract         | SpiritValidationRegistry                                    |"; \
+	echo "| Identity Link    | $(IDENTITY_REGISTRY_ADDRESS)                         |"; \
+	echo "| Network          | $(NETWORK)                                                  |"; \
+	echo "| Owner            | $$OWNER_VAL                              |"; \
+	echo "| Features         | Request/response, designated validators, approval tracking  |"; \
+	echo "+=================================================================================+"; \
+	echo ""; \
+	IDENTITY_REGISTRY_ADDRESS=$(IDENTITY_REGISTRY_ADDRESS) \
+	$(if $(SPIRIT_COUNCIL_MULTISIG),SPIRIT_COUNCIL_MULTISIG=$(SPIRIT_COUNCIL_MULTISIG)) \
+	npx hardhat ignition deploy $(SPIRIT_PATH)/DeploySpiritValidationRegistry.ts --deployment-id SpiritValidationRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo ""
+	@echo "+=================================================================================+"
+	@echo "|                         DEPLOYMENT COMPLETED                                    |"
+	@echo "+=================================================================================+"
+	@echo "| Contract Address  | Check deployment logs above for contract address           |"
+	@echo "| Features          | Validation requests, validator responses, history tracking  |"
+	@echo "+=================================================================================+"
+	@echo ""
+	$(call log-deployment,SpiritValidationRegistry)
+
+deploy-spirit-registry-system: check-env
+	@OWNER_VAL="$(if $(SPIRIT_COUNCIL_MULTISIG),$(SPIRIT_COUNCIL_MULTISIG),$$(npx hardhat run --network $(NETWORK) scripts/get-deployer-address.js 2>/dev/null | tail -1))"; \
+	echo ""; \
+	echo "+=================================================================================+"; \
+	echo "|          SPIRIT REGISTRY SYSTEM - COMPLETE ERC-8004 DEPLOYMENT                 |"; \
+	echo "+=================================================================================+"; \
+	echo "| System           | Spirit Protocol Agent Registry (ERC-8004 compliant)         |"; \
+	echo "| Components       | Identity + Reputation + Validation registries               |"; \
+	echo "| Network          | $(NETWORK)                                                  |"; \
+	echo "| Owner            | $$OWNER_VAL                              |"; \
+	echo "| Standard         | ERC-8004 Trustless Agents                                   |"; \
+	echo "| Purpose          | Synthetic artist agent identity & reputation                |"; \
+	echo "+=================================================================================+"; \
+	echo ""; \
+	echo "🚀 Deploying complete Spirit Registry System..."; \
+	echo ""; \
+	$(if $(SPIRIT_COUNCIL_MULTISIG),SPIRIT_COUNCIL_MULTISIG=$(SPIRIT_COUNCIL_MULTISIG)) \
+	npx hardhat ignition deploy $(SPIRIT_PATH)/DeploySpiritRegistrySystem.ts --deployment-id SpiritRegistrySystem-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo ""
+	@echo "+=================================================================================+"
+	@echo "|                    SPIRIT REGISTRY SYSTEM DEPLOYED                              |"
+	@echo "+=================================================================================+"
+	@echo "| ✅ SpiritIdentityRegistry    | Check deployment logs for address                |"
+	@echo "| ✅ SpiritReputationRegistry  | Check deployment logs for address                |"
+	@echo "| ✅ SpiritValidationRegistry  | Check deployment logs for address                |"
+	@echo "+=================================================================================+"
+	@echo "| Next Steps:                                                                     |"
+	@echo "| 1. Record contract addresses from deployment logs                              |"
+	@echo "| 2. Update frontend configuration                                                |"
+	@echo "| 3. Deploy subgraph for event indexing                                           |"
+	@echo "| 4. Register first test agent                                                    |"
+	@echo "+=================================================================================+"
+	@echo ""
+	$(call log-deployment,SpiritRegistrySystem)
+
+deploy-wallet-registry: check-env
+	@echo "🏦 Deploying WalletRegistry contract to $(NETWORK)..."
+	@echo "📋 This will deploy a registry for managing treasury addresses and multisigs"
+	@echo "👤 Owner: 0x5D6D8518A1d564c85ea5c41d1dc0deca70F2301C (deployer wallet)"
+	@echo "🏛️  Functions: addWallet, updateWallet, removeWallet, setWalletStatus"
+	npx hardhat ignition deploy $(SUPERTOKEN_PATH)/DeployWalletRegistry.ts --deployment-id WalletRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ WalletRegistry deployed successfully!"
+	@echo "📋 Contract: Registry for storing wallet metadata (address, name, description)"
+	@echo "🎯 Features: CRUD operations, active/inactive status, batch queries"
+	@echo "⚡ Status: Ready for wallet management"
+	$(call log-deployment,WalletRegistry)
+
+# Governance Contracts
+deploy-gov-token: check-env
+	@echo "🗳️  Deploying GovToken contract to $(NETWORK)..."
+	@echo "📋 This will deploy the governance token with voting capabilities"
+	@echo "💰 Supply: 1,000,000,000 GOV tokens (1 billion)"
+	@echo "🎯 Features: ERC20Votes, ERC20Permit, delegation support"
+	npx hardhat ignition deploy $(IGNITION_BASE_PATH)/Governance/DeployGovToken.ts --deployment-id GovToken-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ GovToken deployed successfully!"
+	@echo "📊 Token: GovToken (GOV)"
+	@echo "🗳️  Voting: Supports delegation and voting snapshots"
+	@echo "⚡ Status: Ready for delegation and governance participation"
+	$(call log-deployment,GovToken)
+
+deploy-timelock: check-env
+	@echo "⏰ Deploying Timelock contract to $(NETWORK)..."
+	@echo "📋 This will deploy the timelock controller for governance"
+	@echo "⏱️  Min Delay: 2 days (172800 seconds)"
+	@echo "🎯 Features: Proposal execution delay, role-based access"
+	npx hardhat ignition deploy $(IGNITION_BASE_PATH)/Governance/DeployTimelock.ts --deployment-id Timelock-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Timelock deployed successfully!"
+	@echo "⏰ Contract: Timelock controller with 2-day delay"
+	@echo "🔒 Security: Prevents immediate execution of proposals"
+	@echo "⚡ Status: Ready for governor integration"
+	$(call log-deployment,Timelock)
+
+deploy-governor: check-env
+	@echo "🏛️  Deploying Governor contract to $(NETWORK)..."
+	@echo "📋 This will deploy the governor for DAO governance"
+	@echo "📊 Quorum: 25% of total voting supply"
+	@echo "⏱️  Voting Period: ~3 days (45818 blocks)"
+	@echo "🚪 Proposal Threshold: 10% of total supply (100M GOV)"
+	@echo "🎯 Features: Proposal creation, voting, execution via timelock"
+	@if [ "$(GOV_TOKEN_ADDRESS)" = "" ] || [ "$(TIMELOCK_ADDRESS)" = "" ]; then \
+		echo "❌ Error: Please specify GOV_TOKEN_ADDRESS and TIMELOCK_ADDRESS"; \
+		echo "💡 Usage: make deploy-governor GOV_TOKEN_ADDRESS=0x... TIMELOCK_ADDRESS=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	GOV_TOKEN_ADDRESS=$(GOV_TOKEN_ADDRESS) TIMELOCK_ADDRESS=$(TIMELOCK_ADDRESS) npx hardhat ignition deploy $(IGNITION_BASE_PATH)/Governance/DeployGovernor.ts --deployment-id Governor-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Governor deployed successfully!"
+	@echo "🏛️  Contract: Governance system with timelock integration"
+	@echo "🗳️  Voting: Supports proposals, voting, and execution"
+	@echo "⚡ Status: Ready for DAO governance"
+	$(call log-deployment,Governor)
+
+deploy-governance-complete: check-env
+	@echo "🏛️  Deploying complete governance system to $(NETWORK)..."
+	@echo "📋 This will deploy all governance contracts and wire them together"
+	@echo "🗳️  Components: GovToken (1B supply), Timelock (2-day delay), Governor (10% threshold)"
+	@echo "🔗 Integration: Automatic role assignment and token delegation"
+	@echo "✨ Verification: All contracts will be auto-verified on deployment"
+	npx hardhat ignition deploy $(IGNITION_BASE_PATH)/Governance/DeployGovernanceComplete.ts --deployment-id GovernanceComplete-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ Complete governance system deployed successfully!"
+	@echo "🏛️  System: Fully configured DAO with voting and timelock"
+	@echo "🔗 Integration: All roles and permissions properly configured"
+	@echo "🎯 Token Supply: 1 billion GOV tokens minted to deployer"
+	@echo "🗳️  Proposal Threshold: 100M GOV tokens (10% of supply)"
+	@echo "📊 Quorum: 250M GOV tokens (25% of supply)"
+	@echo "⚡ Status: Ready for DAO operations and token distribution"
+	$(call log-deployment,GovernanceComplete)
+
+verify-agent-registry-ownership: check-env
+	@echo "🔍 Verifying AgentRegistry ownership on $(NETWORK)..."
+	@echo "📋 This will verify the deployed contract owner and permissions"
+	@if [ "$(AGENT_REGISTRY_ADDRESS)" = "" ]; then \
+		echo "❌ Error: Please specify AGENT_REGISTRY_ADDRESS"; \
+		echo "💡 Usage: make verify-agent-registry-ownership AGENT_REGISTRY_ADDRESS=0x... NETWORK=$(NETWORK)"; \
+		exit 1; \
+	fi
+	AGENT_REGISTRY_ADDRESS=$(AGENT_REGISTRY_ADDRESS) npx hardhat run scripts/verify-agent-registry-ownership.ts --network $(NETWORK)
+	@echo "✅ Ownership verification completed!"
+
+deploy-agent-identity-registry: check-env
+	@echo "🆔 Deploying ERC-8004 Agent Identity Registry to $(NETWORK)..."
+	@echo "📋 This will deploy the parent registry for agent identity management"
+	@echo "⚠️  Note: Update SPIRIT_REGISTRY_ADDRESS in DeployAgentIdentityRegistry.ts first!"
+	npx hardhat ignition deploy ignition/modules/Agents/DeployAgentIdentityRegistry.ts --deployment-id AgentIdentityRegistry-$(shell date +%s) --network $(NETWORK) --verify || true
+	@echo "✅ AgentIdentityRegistry deployed successfully!"
+	@echo "📋 Registry: ERC-8004 compliant Agent Identity Registry"
+	@echo "🔗 Features: hash(agentDomain, agentCard, agentWallet) → AgentID mapping"
+	@echo "⚡ Status: Ready for agent identity registration and resolution"
+	@echo "🎯 Integration: Links with SpiritRegistry wallet verification"
+	$(call log-deployment,AgentIdentityRegistry)
+
+# =============================
+# FOUNDRY DEPLOYMENTS - SPIRIT REGISTRY V2
+# =============================
+
+# Deploy Spirit Registry V2 (Identity + Validation + Reputation + Controller)
+deploy-spirit-registry-v2: check-env
+	@echo "🚀 Deploying Complete Spirit Registry V2 System to $(NETWORK)..."
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@# Get deployer address from private key if SPIRIT_COUNCIL_ADDRESS not set
+	@if [ "$(SPIRIT_COUNCIL_ADDRESS)" = "" ]; then \
+		if [ "$(PRIVATE_KEY)" != "" ]; then \
+			DEPLOYER_ADDRESS=$$(cast wallet address $(PRIVATE_KEY) 2>/dev/null || echo ""); \
+			if [ "$$DEPLOYER_ADDRESS" != "" ]; then \
+				echo "📌 No SPIRIT_COUNCIL_ADDRESS provided, using deployer: $$DEPLOYER_ADDRESS"; \
+				export SPIRIT_COUNCIL_ADDRESS="$$DEPLOYER_ADDRESS"; \
+			else \
+				echo "❌ Error: Could not derive address from PRIVATE_KEY"; \
+				echo "💡 Please set SPIRIT_COUNCIL_ADDRESS=0x... or ensure PRIVATE_KEY is valid"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Error: SPIRIT_COUNCIL_ADDRESS not set and no PRIVATE_KEY available"; \
+			echo "💡 Run: export SPIRIT_COUNCIL_ADDRESS=0x..."; \
+			echo "💡 Or ensure PRIVATE_KEY is set for deployment"; \
+			exit 1; \
+		fi; \
+	else \
+		SPIRIT_COUNCIL_ADDRESS="$(SPIRIT_COUNCIL_ADDRESS)"; \
+	fi; \
+	echo "📋 Network: $(NETWORK)"; \
+	echo "👤 Owner: $$SPIRIT_COUNCIL_ADDRESS"; \
+	echo "🏭 Safe Factory: $(or $(SAFE_FACTORY),Not set - using 0x0)"; \
+	echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+	if [ "$(SAFE_FACTORY)" = "" ]; then \
+		echo "⚠️  Warning: SAFE_FACTORY not set, controller won't deploy Safes"; \
+		echo "💡 For mainnet, use Gnosis Safe Factory:"; \
+		echo "   Ethereum: 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2"; \
+		echo "   Base: 0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC"; \
+		echo "   Sepolia: 0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC"; \
+	fi; \
+	npx hardhat ignition deploy ignition/modules/Spirit/DeploySpiritRegistryV2System.ts \
+		--parameters "{\"owner\": \"$$SPIRIT_COUNCIL_ADDRESS\", \"safeFactory\": \"$(or $(SAFE_FACTORY),0x0000000000000000000000000000000000000000)\"}" \
+		--deployment-id SpiritRegistryV2-$(shell date +%s) \
+		--network $(NETWORK) \
+		--verify || true
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "✅ Spirit Registry V2 System deployed successfully!"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "🔐 Features:"
+	@echo "  ✓ Safe multisig NFT ownership"
+	@echo "  ✓ EIP-712 signature verification"
+	@echo "  ✓ ERC-8004 compliant identity"
+	@echo "  ✓ Unified controller for setup"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	$(call log-deployment,SpiritRegistryV2)
+	@echo "📝 Save the deployed addresses above!"
+	@echo "💡 Next step: make setup-first-agent"
+
+# Deploy only the identity registry
+deploy-spirit-identity-v2: check-env
+	@echo "🆔 Deploying Spirit Identity Registry V2 to $(NETWORK)..."
+	@# Auto-detect owner from deployer if not set
+	@if [ "$(SPIRIT_COUNCIL_ADDRESS)" = "" ]; then \
+		if [ "$(PRIVATE_KEY)" != "" ]; then \
+			SPIRIT_COUNCIL_ADDRESS=$$(cast wallet address $(PRIVATE_KEY) 2>/dev/null); \
+			echo "📌 Using deployer as owner: $$SPIRIT_COUNCIL_ADDRESS"; \
+		else \
+			echo "❌ Error: SPIRIT_COUNCIL_ADDRESS not set and no PRIVATE_KEY"; \
+			exit 1; \
+		fi; \
+	else \
+		SPIRIT_COUNCIL_ADDRESS="$(SPIRIT_COUNCIL_ADDRESS)"; \
+	fi; \
+	npx hardhat deploy:single SpiritIdentityRegistryV2 \
+		--args $$SPIRIT_COUNCIL_ADDRESS \
+		--network $(NETWORK) \
+		--verify || true
+	@echo "✅ Identity Registry V2 deployed!"
+	$(call log-deployment,SpiritIdentityV2)
+
+# Deploy validation and reputation registries
+deploy-spirit-registries: check-env
+	@echo "📚 Deploying Validation and Reputation Registries to $(NETWORK)..."
+	@if [ "$(IDENTITY_REGISTRY)" = "" ]; then \
+		echo "❌ Error: IDENTITY_REGISTRY address required"; \
+		echo "💡 Deploy identity first: make deploy-spirit-identity-v2"; \
+		exit 1; \
+	fi
+	@# Auto-detect owner from deployer if not set
+	@if [ "$(SPIRIT_COUNCIL_ADDRESS)" = "" ]; then \
+		if [ "$(PRIVATE_KEY)" != "" ]; then \
+			SPIRIT_COUNCIL_ADDRESS=$$(cast wallet address $(PRIVATE_KEY) 2>/dev/null); \
+			echo "📌 Using deployer as owner: $$SPIRIT_COUNCIL_ADDRESS"; \
+		else \
+			echo "❌ Error: SPIRIT_COUNCIL_ADDRESS not set and no PRIVATE_KEY"; \
+			exit 1; \
+		fi; \
+	else \
+		SPIRIT_COUNCIL_ADDRESS="$(SPIRIT_COUNCIL_ADDRESS)"; \
+	fi; \
+	echo "🔄 Deploying Validation Registry..."; \
+	npx hardhat deploy:single SpiritValidationRegistry \
+		--args $(IDENTITY_REGISTRY) $$SPIRIT_COUNCIL_ADDRESS \
+		--network $(NETWORK) \
+		--verify || true; \
+	echo "🔄 Deploying Reputation Registry..."; \
+	npx hardhat deploy:single SpiritReputationRegistry \
+		--args $(IDENTITY_REGISTRY) $$SPIRIT_COUNCIL_ADDRESS \
+		--network $(NETWORK) \
+		--verify || true
+	@echo "✅ Registries deployed!"
+	$(call log-deployment,SpiritRegistries)
+
+# Deploy controller only
+deploy-spirit-controller: check-env
+	@echo "🎮 Deploying Spirit Registry Controller to $(NETWORK)..."
+	@if [ "$(IDENTITY_REGISTRY)" = "" ] || [ "$(VALIDATION_REGISTRY)" = "" ] || [ "$(REPUTATION_REGISTRY)" = "" ]; then \
+		echo "❌ Error: Registry addresses required"; \
+		echo "💡 Set IDENTITY_REGISTRY, VALIDATION_REGISTRY, REPUTATION_REGISTRY"; \
+		exit 1; \
+	fi
+	@# Auto-detect owner from deployer if not set
+	@if [ "$(SPIRIT_COUNCIL_ADDRESS)" = "" ]; then \
+		if [ "$(PRIVATE_KEY)" != "" ]; then \
+			SPIRIT_COUNCIL_ADDRESS=$$(cast wallet address $(PRIVATE_KEY) 2>/dev/null); \
+			echo "📌 Using deployer as owner: $$SPIRIT_COUNCIL_ADDRESS"; \
+		else \
+			echo "❌ Error: SPIRIT_COUNCIL_ADDRESS not set and no PRIVATE_KEY"; \
+			exit 1; \
+		fi; \
+	else \
+		SPIRIT_COUNCIL_ADDRESS="$(SPIRIT_COUNCIL_ADDRESS)"; \
+	fi; \
+	npx hardhat deploy:single SpiritRegistryController \
+		--args $(IDENTITY_REGISTRY) $(VALIDATION_REGISTRY) $(REPUTATION_REGISTRY) $(or $(SAFE_FACTORY),0x0000000000000000000000000000000000000000) $$SPIRIT_COUNCIL_ADDRESS \
+		--network $(NETWORK) \
+		--verify || true
+	@echo "✅ Controller deployed!"
+	$(call log-deployment,SpiritController)
+
+# Setup first agent (example)
+setup-first-agent: check-env
+	@echo "🤖 Setting up your first AI agent..."
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@if [ "$(CONTROLLER_ADDRESS)" = "" ]; then \
+		echo "❌ Error: CONTROLLER_ADDRESS not set"; \
+		echo "💡 Get from deployment output or run: make get-deployment-addresses"; \
+		exit 1; \
+	fi
+	@if [ "$(AGENT_EOA)" = "" ] || [ "$(ARTIST_ADDRESS)" = "" ]; then \
+		echo "❌ Error: AGENT_EOA and ARTIST_ADDRESS required"; \
+		echo "💡 Usage:"; \
+		echo "   export AGENT_EOA=0x123...      # Agent's signing wallet"; \
+		echo "   export ARTIST_ADDRESS=0x456... # Artist/trainer wallet"; \
+		echo "   export SAFE_ADDRESS=0x789...   # Optional: existing Safe"; \
+		echo "   export METADATA_URI=ipfs://... # Agent metadata"; \
+		echo "   make setup-first-agent"; \
+		exit 1; \
+	fi
+	@echo "📋 Agent Configuration:"
+	@echo "  Agent EOA: $(AGENT_EOA)"
+	@echo "  Artist: $(ARTIST_ADDRESS)" 
+	@echo "  Safe: $(or $(SAFE_ADDRESS),Will be created)"
+	@echo "  Metadata: $(or $(METADATA_URI),ipfs://default)"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "🚀 Calling controller.quickSetup()..."
+	cast send $(CONTROLLER_ADDRESS) \
+		"quickSetup(address,address,string,bool)" \
+		$(AGENT_EOA) \
+		$(ARTIST_ADDRESS) \
+		"$(or $(METADATA_URI),ipfs://QmDefault)" \
+		$(or $(DEPLOY_SAFE),false) \
+		--private-key $(PRIVATE_KEY) \
+		--rpc-url $(RPC_URL) \
+		--json | jq -r '.'
+	@echo "✅ Agent setup complete!"
+	@echo "💡 Check transaction for agent ID and Safe address"
+
+# Verify agent signature (test)
+verify-agent-signature: check-env
+	@echo "🔐 Verifying agent signature..."
+	@if [ "$(IDENTITY_REGISTRY)" = "" ] || [ "$(AGENT_ID)" = "" ] || [ "$(MESSAGE)" = "" ] || [ "$(SIGNATURE)" = "" ]; then \
+		echo "❌ Error: Missing parameters"; \
+		echo "💡 Usage:"; \
+		echo "   export IDENTITY_REGISTRY=0x..."; \
+		echo "   export AGENT_ID=1"; \
+		echo "   export MESSAGE='Hello, I am agent'"; \
+		echo "   export SIGNATURE=0x..."; \
+		echo "   make verify-agent-signature"; \
+		exit 1; \
+	fi
+	@MESSAGE_HASH=$$(cast keccak "$(MESSAGE)"); \
+	cast call $(IDENTITY_REGISTRY) \
+		"verifyAgentSignature(uint256,bytes32,bytes)" \
+		$(AGENT_ID) \
+		$$MESSAGE_HASH \
+		$(SIGNATURE) \
+		--rpc-url $(RPC_URL) | \
+		(read result; \
+		if [ "$$result" = "0x0000000000000000000000000000000000000000000000000000000000000001" ]; then \
+			echo "✅ Signature valid!"; \
+		else \
+			echo "❌ Invalid signature"; \
+		fi)
+
+# Get deployment addresses from latest deployment
+get-deployment-addresses: 
+	@echo "📋 Latest Spirit Registry V2 Deployment Addresses:"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@LATEST_DEPLOYMENT=$$(ls -t ignition/deployments/ | grep SpiritRegistryV2 | head -n1); \
+	if [ "$$LATEST_DEPLOYMENT" != "" ]; then \
+		echo "📁 Deployment: $$LATEST_DEPLOYMENT"; \
+		cat ignition/deployments/$$LATEST_DEPLOYMENT/deployed_addresses.json | jq -r '. | to_entries[] | "export \(.key | ascii_upcase | gsub("#";"_"))_ADDRESS=\(.value)"'; \
+		echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+		echo "💡 Copy and run these exports to use the addresses"; \
+	else \
+		echo "❌ No deployments found"; \
+		echo "💡 Run: make deploy-spirit-registry-v2-full"; \
+	fi
+
+# Test the contracts locally
+test-spirit-registry-v2:
+	@echo "🧪 Testing Spirit Registry V2 with Safe integration..."
+	npx hardhat test test/Spirit/SpiritRegistryV2Safe.test.ts
+	@echo "✅ All tests passed!"
+
+# Compile contracts
+compile-spirit-v2:
+	@echo "🔨 Compiling Spirit Registry V2 contracts..."
+	npx hardhat compile
+	@echo "✅ Compilation successful!"
+
+# Clean and rebuild
+clean-spirit-v2:
+	@echo "🧹 Cleaning build artifacts..."
+	rm -rf artifacts cache
+	@echo "🔨 Rebuilding..."
+	npx hardhat compile
+	@echo "✅ Clean build complete!"
+
+# Deployment helper for different networks
+deploy-spirit-v2-sepolia:
+	NETWORK=sepolia SAFE_FACTORY=0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC make deploy-spirit-registry-v2-full
+
+deploy-spirit-v2-base:
+	NETWORK=base SAFE_FACTORY=0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC make deploy-spirit-registry-v2-full
+
+deploy-spirit-v2-base-sepolia:
+	NETWORK=base-sepolia SAFE_FACTORY=0xC22834581EbC8527d974F8a1c97E1bEA4EF910BC make deploy-spirit-registry-v2-full
+
+deploy-spirit-v2-mainnet:
+	NETWORK=ethereum SAFE_FACTORY=0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2 make deploy-spirit-registry-v2-full
+
+# Local testing deployment
+deploy-spirit-v2-local:
+	NETWORK=hardhat SPIRIT_COUNCIL_ADDRESS=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 make deploy-spirit-registry-v2-full
+
+# Help command
+help-spirit-v2:
+	@echo "🔮 Spirit Registry V2 Deployment Guide"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "📋 Quick Start:"
+	@echo "  1. Set environment (optional):"
+	@echo "     export NETWORK=sepolia"
+	@echo "     export SPIRIT_COUNCIL_ADDRESS=0x...  # Optional - defaults to deployer"
+	@echo "     export SAFE_FACTORY=0x...           # Optional for Safe deployment"
+	@echo ""
+	@echo "  2. Deploy everything:"
+	@echo "     make deploy-spirit-registry-v2-full"
+	@echo "     # Will use deployer as owner if SPIRIT_COUNCIL_ADDRESS not set"
+	@echo ""
+	@echo "  3. Get deployed addresses:"
+	@echo "     make get-deployment-addresses"
+	@echo ""
+	@echo "  4. Setup first agent:"
+	@echo "     export CONTROLLER_ADDRESS=0x..."
+	@echo "     export AGENT_EOA=0x..."
+	@echo "     export ARTIST_ADDRESS=0x..."
+	@echo "     make setup-first-agent"
+	@echo ""
+	@echo "📚 Available Commands:"
+	@echo "  deploy-spirit-registry-v2-full  - Deploy complete system"
+	@echo "  deploy-spirit-v2-sepolia       - Deploy to Sepolia"
+	@echo "  deploy-spirit-v2-base          - Deploy to Base"
+	@echo "  deploy-spirit-v2-local         - Deploy locally"
+	@echo "  setup-first-agent              - Setup an agent"
+	@echo "  get-deployment-addresses       - Get deployed addresses"
+	@echo "  test-spirit-registry-v2        - Run tests"
+	@echo ""
+	@echo "🔑 Ownership:"
+	@echo "  • Default: Deployer wallet (from PRIVATE_KEY)"
+	@echo "  • Override: Set SPIRIT_COUNCIL_ADDRESS=0x..."
+	@echo "  • Transfer later: Use transferOwnership() on each contract"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# =============================
+# Superfluid DistributionPool Interaction Targets
+# ============================='
+
+interact-pool: check-env
+	@echo "🔧 Interacting with DistributionPool on $(NETWORK)..."
+	@echo "📋 This will demonstrate basic pool interactions and setup"
+	@echo "⚠️  Note: Update contract addresses in scripts/interact-with-distribution-pool.ts first!"
+	npx hardhat run scripts/interact-with-distribution-pool.ts --network $(NETWORK)
+	@echo "✅ Pool interaction completed!"
+
+check-pool-status: check-env
+	@echo "🔍 Checking DistributionPool status on $(NETWORK)..."
+	@echo "📋 This will show current pool status, members, and revenue flow"
+	npx hardhat run scripts/check-pool-status.ts --network $(NETWORK)
+	@echo "✅ Pool status check completed!"
+
+start-revenue-flow: check-env
+	@echo "🌊 Starting revenue flow to DistributionPool on $(NETWORK)..."
+	@echo "📋 This will start continuous revenue distribution to pool members"
+	@echo "💡 Usage: make start-revenue-flow FLOW_RATE=100 (for 100 SPIRIT/second)"
+	@echo "💡 Or: make start-revenue-flow stop (to stop current flow)"
+	@echo "💡 Or: make start-revenue-flow update 200 (to update to 200 SPIRIT/second)"
+	@if [ "$(FLOW_RATE)" != "" ]; then \
+		npx hardhat run scripts/start-revenue-flow.ts $(FLOW_RATE) --network $(NETWORK); \
+	elif [ "$(firstword $(MAKECMDGOALS))" = "stop" ]; then \
+		npx hardhat run scripts/start-revenue-flow.ts stop --network $(NETWORK); \
+	elif [ "$(firstword $(MAKECMDGOALS))" = "update" ]; then \
+		npx hardhat run scripts/start-revenue-flow.ts update $(FLOW_RATE) --network $(NETWORK); \
+	else \
+		npx hardhat run scripts/start-revenue-flow.ts --network $(NETWORK); \
+	fi
+	@echo "✅ Revenue flow management completed!"
+
+real-world-scenarios: check-env
+	@echo "🌍 Running real-world DistributionPool scenarios on $(NETWORK)..."
+	@echo "📋 This will demonstrate wallet interactions, token transfers, and pool dynamics"
+	@echo "⚠️  Note: This is a comprehensive demonstration - may take several minutes!"
+	npx hardhat run scripts/real-world-pool-scenarios.ts --network $(NETWORK)
+	@echo "✅ Real-world scenarios completed!"
+
+learn-eth-distribution: check-env
+	@echo "🎓 Starting Superfluid ETH Distribution Learning Simulation on $(NETWORK)..."
+	@echo "📚 This is an interactive learning journey with step-by-step explanations"
+	@echo "💡 You'll learn how ETH revenue gets distributed to SPIRIT token holders"
+	@echo "🤔 The script will ask for your confirmation before each action"
+	npx hardhat run scripts/learn-eth-distribution.ts --network $(NETWORK)
+	@echo "✅ Learning simulation completed!"
+
+deploy-complete-system: check-env
+	@echo "🚀 Deploying Complete SPIRIT + DistributionPool System on $(NETWORK)..."
+	@echo "📝 This will deploy both PureSuperToken and DistributionPool together"
+	@echo "🔧 With proper initialization and member setup"
+	npx hardhat ignition deploy ignition/modules/SuperTokens/DeployCompleteSystem.ts --network $(NETWORK)
+	@echo "✅ Complete system deployment finished!"
+
+# Helper target for revenue flow management
+stop-revenue-flow: check-env
+	@echo "🛑 Stopping revenue flow on $(NETWORK)..."
+	npx hardhat run scripts/start-revenue-flow.ts --network $(NETWORK) stop
+	@echo "✅ Revenue flow stopped!"
+
+update-revenue-flow: check-env
+	@echo "🔄 Updating revenue flow rate on $(NETWORK)..."
+	@if [ "$(FLOW_RATE)" = "" ]; then \
+		echo "❌ Error: Please specify FLOW_RATE (e.g., make update-revenue-flow FLOW_RATE=200)"; \
+		exit 1; \
+	fi
+	npx hardhat run scripts/start-revenue-flow.ts update $(FLOW_RATE) --network $(NETWORK)
+	@echo "✅ Revenue flow rate updated!"
+
+# Removed duplicate FirstWorks deployment targets
+# Use deploy-first-works-production, deploy-first-works-production-testnet, or deploy-first-works-testnet instead
+
+# ========================================
+# FOUNDRY / FORGE TARGETS
+# ========================================
+
+# Foundry compilation
+.PHONY: forge-build
+forge-build:
+	@echo "🔨 Compiling contracts with Foundry..."
+	forge build
+	@echo "✅ Compilation complete!"
+
+# Foundry tests
+.PHONY: forge-test
+forge-test:
+	@echo "🧪 Running Foundry tests..."
+	forge test -vvv
+	@echo "✅ Tests complete!"
+
+# Foundry gas report
+.PHONY: forge-gas
+forge-gas:
+	@echo "⛽ Generating gas report..."
+	forge test --gas-report
+	@echo "✅ Gas report complete!"
+
+# Foundry coverage
+.PHONY: forge-coverage
+forge-coverage:
+	@echo "📊 Generating coverage report..."
+	forge coverage
+	@echo "✅ Coverage report complete!"
+
+# Clean Foundry artifacts
+.PHONY: forge-clean
+forge-clean:
+	@echo "🧹 Cleaning Foundry artifacts..."
+	forge clean
+	rm -rf out cache_foundry
+	@echo "✅ Clean complete!"
+
+# ========================================
+# GEPETTO TOYS DEPLOYMENT (FOUNDRY)
+# ========================================
+
+# Deploy Gepetto Toys with Foundry (dry-run)
+.PHONY: forge-deploy-gepetto-toys-dry
+forge-deploy-gepetto-toys-dry:
+	@echo "🎨 Simulating Gepetto Toys deployment on $(NETWORK)..."
+	forge script script/DeployGepettoToys.s.sol:DeployGepettoToys \
+		--rpc-url $(NETWORK) \
+		-vvvv
+	@echo "✅ Simulation complete!"
+
+# Deploy Gepetto Toys with Foundry (real deployment)
+.PHONY: forge-deploy-gepetto-toys
+forge-deploy-gepetto-toys:
+	@echo "🎨 Deploying Gepetto Toys NFT System to $(NETWORK)..."
+	@echo "⚠️  This will broadcast transactions and spend gas!"
+	@if [ -n "$(OWNER)" ]; then \
+		echo "📋 Final Owner: $(OWNER)"; \
+		OWNER=$(OWNER) forge script script/DeployGepettoToys.s.sol:DeployGepettoToys \
+			--rpc-url $(NETWORK) \
+			--broadcast \
+			$(AUTH_FLAGS) \
+			--verify \
+			-vvvv; \
+	else \
+		echo "📋 Final Owner: Deployer (OWNER not specified)"; \
+		forge script script/DeployGepettoToys.s.sol:DeployGepettoToys \
+			--rpc-url $(NETWORK) \
+			--broadcast \
+			$(AUTH_FLAGS) \
+			--verify \
+			-vvvv; \
+	fi
+	@echo "✅ Deployment complete!"
+
+# Deploy Gepetto Toys to Base Sepolia (testnet)
+.PHONY: forge-deploy-gepetto-toys-base-sepolia
+forge-deploy-gepetto-toys-base-sepolia:
+	@echo "🎨 Deploying Gepetto Toys to Base Sepolia..."
+	$(MAKE) forge-deploy-gepetto-toys NETWORK=base-sepolia
+	@echo "✅ Deployed to Base Sepolia!"
+
+# Deploy Gepetto Toys to Base Mainnet (production)
+.PHONY: forge-deploy-gepetto-toys-base
+forge-deploy-gepetto-toys-base:
+	@echo "🎨 Deploying Gepetto Toys to Base Mainnet..."
+	@echo "⚠️  PRODUCTION DEPLOYMENT - Double check configuration!"
+	$(MAKE) forge-deploy-gepetto-toys NETWORK=base
+	@echo "✅ Deployed to Base Mainnet!"
+
+# ========================================
+# FOUNDRY UTILITIES
+# ========================================
+
+# Format Solidity code with Foundry
+.PHONY: forge-fmt
+forge-fmt:
+	@echo "💅 Formatting Solidity code..."
+	forge fmt
+	@echo "✅ Formatting complete!"
+
+# Check formatting
+.PHONY: forge-fmt-check
+forge-fmt-check:
+	@echo "🔍 Checking Solidity formatting..."
+	forge fmt --check
+	@echo "✅ Format check complete!"
+
+# Update Foundry dependencies
+.PHONY: forge-update
+forge-update:
+	@echo "📦 Updating Foundry dependencies..."
+	forge update
+	@echo "✅ Dependencies updated!"
+
+# Install specific Foundry dependency
+.PHONY: forge-install
+forge-install:
+	@if [ "$(DEP)" = "" ]; then \
+		echo "❌ Error: Please specify DEP (e.g., make forge-install DEP=OpenZeppelin/openzeppelin-contracts@v5.4.0)"; \
+		exit 1; \
+	fi
+	@echo "📦 Installing $(DEP)..."
+	forge install $(DEP)
+	@echo "✅ Installed $(DEP)!"
+
+# Show Foundry config
+.PHONY: forge-config
+forge-config:
+	@echo "⚙️  Foundry Configuration:"
+	@forge config
+

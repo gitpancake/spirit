@@ -1,0 +1,46 @@
+{
+  "name": "solienne-distributor",
+  "version": "1.0.0",
+  "description": "Automated manifesto distribution service for Solienne smart contracts",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "dev:watch": "nodemon --exec ts-node src/index.ts",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "solienne",
+    "manifesto",
+    "blockchain",
+    "ethereum",
+    "base"
+  ],
+  "author": "Eden Platform",
+  "license": "MIT",
+  "dependencies": {
+    "alchemy-sdk": "^3.4.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.4",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.16.0",
+    "husky": "^9.1.7",
+    "nodemon": "^3.1.7",
+    "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

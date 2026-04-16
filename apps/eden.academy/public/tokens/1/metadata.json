@@ -1,0 +1,26 @@
+{
+  "original_filename": "0635_the_madness_of_infinity.jpg",
+  "ipfs_hash": "bafkreigpvdvp6z6j5mpduiroos7xnmtjolh5txqxgc2i2wwvplyijnnmuy",
+  "work_id": "d4c7f7dd-9d7a-467e-a350-092fcf9f59f8",
+  "title": "the madness of infinity",
+  "archive_number": "635",
+  "created_date": "2021-06-09",
+  "name": "the madness of infinity",
+  "description": "the madness of infinity",
+  "image": "ipfs://bafkreigpvdvp6z6j5mpduiroos7xnmtjolh5txqxgc2i2wwvplyijnnmuy",
+  "tokenId": 1,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "635"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-09"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "0635_the_madness_of_infinity.jpg"
+    }
+  ]
+}

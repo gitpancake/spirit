@@ -1,0 +1,18 @@
+# Run build and lint to ensure everything compiles correctly
+echo "Running build check before commit..."
+npm run build
+
+if [ $? -ne 0 ]; then
+  echo "Build failed! Please fix build errors before committing."
+  exit 1
+fi
+
+echo "Running lint check..."
+npm run lint
+
+if [ $? -ne 0 ]; then
+  echo "Linting failed! Please fix linting errors before committing."
+  exit 1
+fi
+
+echo "Build and lint passed! Proceeding with commit."

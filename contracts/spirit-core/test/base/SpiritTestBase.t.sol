@@ -1,0 +1,96 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+import "forge-std/Test.sol";
+
+import { VestingSchedulerV3 } from "@superfluid-finance/automation-contracts/scheduler/contracts/VestingSchedulerV3.sol";
+import { SuperTokenV1Library } from "@superfluid-finance/ethereum-contracts/contracts/apps/SuperTokenV1Library.sol";
+import { ERC1820RegistryCompiled } from
+    "@superfluid-finance/ethereum-contracts/contracts/libs/ERC1820RegistryCompiled.sol";
+import { ISuperToken } from "@superfluid-finance/ethereum-contracts/contracts/superfluid/SuperToken.sol";
+import { SuperfluidFrameworkDeployer } from
+    "@superfluid-finance/ethereum-contracts/contracts/utils/SuperfluidFrameworkDeployer.t.sol";
+
+/* Local Imports */
+import { SpiritDeployer } from "script/SpiritDeployer.sol";
+import { NetworkConfig } from "script/config/NetworkConfig.sol";
+
+import { RewardController } from "src/core/RewardController.sol";
+import { SpiritFactory } from "src/factory/SpiritFactory.sol";
+
+import { SpiritVestingFactory } from "src/vesting/SpiritVestingFactory.sol";
+import { AirstreamFactoryMock } from "test/mocks/AirstreamFactoryMock.sol";
+import { UniswapDeployer } from "test/utils/UniswapDeployer.sol";
+
+contract SpiritTestBase is UniswapDeployer {
+
+    using SuperTokenV1Library for ISuperToken;
+
+    // Contracts under test
+    SpiritFactory internal _spiritFactory;
+    RewardController internal _rewardController;
+    SpiritVestingFactory internal _spiritVestingFactory;
+
+    ISuperToken internal _spirit;
+
+    SuperfluidFrameworkDeployer internal _deployer;
+    SuperfluidFrameworkDeployer.Framework internal _sf;
+    VestingSchedulerV3 internal _vestingScheduler;
+    AirstreamFactoryMock internal _airstreamFactory;
+
+    address internal immutable DEPLOYER = makeAddr("DEPLOYER");
+    address internal immutable TREASURY = makeAddr("TREASURY");
+    address internal immutable ADMIN = makeAddr("ADMIN");
+    address internal immutable ALICE = makeAddr("ALICE");
+    address internal immutable ARTIST = makeAddr("ARTIST");
+    address internal immutable AGENT = makeAddr("AGENT");
+
+    // 1:1 Sqrt Price
+    uint160 internal constant DEFAULT_SQRT_PRICE_X96 = 79_228_162_514_264_337_593_543_950_336;
+
+    function setUp() public virtual override {
+        // Superfluid Protocol Deployment Start
+        vm.etch(ERC1820RegistryCompiled.at, ERC1820RegistryCompiled.bin);
+        _deployer = new SuperfluidFrameworkDeployer();
+        _deployer.deployTestFramework();
+        _sf = _deployer.getFramework();
+        _vestingScheduler = new VestingSchedulerV3(_sf.host);
+        // Superfluid Protocol Deployment End
+
+        // Deploy Uniswap Contracts
+        UniswapDeployer.setUp();
+
+        // Deploy Airstream Factory Mock
+        _airstreamFactory = new AirstreamFactoryMock();
+
+        // Deploy Spirit Contracts
+        NetworkConfig.SpiritDeploymentConfig memory config = NetworkConfig.getLocalConfig();
+
+        config.admin = ADMIN;
+        config.distributor = ADMIN;
+        config.treasury = TREASURY;
+        config.superTokenFactory = address(_sf.superTokenFactory);
+        config.positionManager = address(positionManager);
+        config.poolManager = address(manager);
+        config.permit2 = address(permit2);
+        config.airstreamFactory = address(_airstreamFactory);
+        config.vestingScheduler = address(_vestingScheduler);
+
+        // Deploy the contracts under test
+        vm.startPrank(DEPLOYER);
+        SpiritDeployer.SpiritDeploymentResult memory result = SpiritDeployer.deployAll(config, DEPLOYER);
+        vm.stopPrank();
+
+        _spiritFactory = SpiritFactory(result.spiritFactoryProxy);
+        _rewardController = RewardController(result.rewardControllerProxy);
+        _spiritVestingFactory = SpiritVestingFactory(result.spiritVestingFactory);
+        _spirit = ISuperToken(result.spirit);
+    }
+
+    function dealSuperToken(address from, address to, ISuperToken token, uint256 amount) internal {
+        vm.startPrank(from);
+        token.transfer(to, amount);
+        vm.stopPrank();
+    }
+
+}

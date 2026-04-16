@@ -1,0 +1,357 @@
+# ============================================================================
+# FOUNDRY/FORGE DEPLOYMENT MAKEFILE
+# ============================================================================
+# This Makefile uses Foundry's keystore for secure key management
+# Keys are stored encrypted and accessed by account name
+# ============================================================================
+
+# Default values
+NETWORK ?= sepolia
+ACCOUNT ?= deployer
+VERIFY ?= true
+SPIRIT_COUNCIL_ADDRESS ?= 
+
+# Network RPC URLs (set these in .env)
+include .env
+export
+
+# Forge flags
+FORGE_FLAGS = --rpc-url $(NETWORK) \
+              --account $(ACCOUNT) \
+              --broadcast \
+              --slow \
+              -vvv
+
+ifeq ($(VERIFY),true)
+    FORGE_FLAGS += --verify --etherscan-api-key $${ETHERSCAN_API_KEY}
+endif
+
+# Colors for output
+RED := \033[0;31m
+GREEN := \033[0;32m
+YELLOW := \033[1;33m
+CYAN := \033[0;36m
+NC := \033[0m # No Color
+
+.PHONY: help install test build deploy
+
+# ============================================================================
+# HELP
+# ============================================================================
+
+help:
+	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo "$(CYAN)🔮 Spirit Registry V2 - Foundry Deployment$(NC)"
+	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo ""
+	@echo "$(GREEN)Setup Commands:$(NC)"
+	@echo "  make keystore-create    - Create new keystore account"
+	@echo "  make keystore-import    - Import existing private key"
+	@echo "  make keystore-list      - List all keystore accounts"
+	@echo "  make install-foundry    - Install/update Foundry"
+	@echo ""
+	@echo "$(GREEN)Build Commands:$(NC)"
+	@echo "  make build              - Compile contracts with Forge"
+	@echo "  make clean              - Clean build artifacts"
+	@echo "  make test               - Run Forge tests"
+	@echo "  make coverage           - Run test coverage"
+	@echo ""
+	@echo "$(GREEN)Deployment Commands:$(NC)"
+	@echo "  make deploy             - Deploy complete system"
+	@echo "  make deploy-testnet     - Deploy to Sepolia (default)"
+	@echo "  make deploy-mainnet     - Deploy to Ethereum mainnet"
+	@echo "  make deploy-base        - Deploy to Base"
+	@echo "  make deploy-local       - Deploy to local node"
+	@echo ""
+	@echo "$(GREEN)Verification:$(NC)"
+	@echo "  make verify             - Verify all contracts"
+	@echo "  make verify-single      - Verify single contract"
+	@echo ""
+	@echo "$(GREEN)Agent Management:$(NC)"
+	@echo "  make setup-agent        - Setup new agent"
+	@echo "  make verify-signature   - Verify agent signature"
+	@echo ""
+	@echo "$(YELLOW)Environment Variables:$(NC)"
+	@echo "  NETWORK                 - Target network (default: sepolia)"
+	@echo "  ACCOUNT                 - Keystore account name (default: deployer)"
+	@echo "  SPIRIT_COUNCIL_ADDRESS  - Owner address (default: deployer)"
+	@echo "  VERIFY                  - Verify on Etherscan (default: true)"
+	@echo ""
+	@echo "$(YELLOW)Examples:$(NC)"
+	@echo "  make deploy NETWORK=sepolia ACCOUNT=mykey"
+	@echo "  make deploy-mainnet ACCOUNT=prod-deployer VERIFY=true"
+	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+
+# ============================================================================
+# KEYSTORE MANAGEMENT
+# ============================================================================
+
+keystore-create:
+	@echo "$(CYAN)🔑 Creating new keystore account...$(NC)"
+	@read -p "Enter account name: " name; \
+	cast wallet new ~/.foundry/keystores/$$name
+	@echo "$(GREEN)✅ Keystore account created!$(NC)"
+	@echo "$(YELLOW)⚠️  Save your password securely!$(NC)"
+
+keystore-import:
+	@echo "$(CYAN)🔑 Importing private key to keystore...$(NC)"
+	@read -p "Enter account name: " name; \
+	read -s -p "Enter private key: " pk; \
+	echo $$pk | cast wallet import ~/.foundry/keystores/$$name --interactive
+	@echo "$(GREEN)✅ Private key imported to keystore!$(NC)"
+
+keystore-list:
+	@echo "$(CYAN)📋 Available keystore accounts:$(NC)"
+	@ls -la ~/.foundry/keystores/ 2>/dev/null || echo "No accounts found"
+
+keystore-address:
+	@echo "$(CYAN)🔍 Getting address for account: $(ACCOUNT)$(NC)"
+	@cast wallet address --account $(ACCOUNT)
+
+# ============================================================================
+# INSTALLATION & SETUP
+# ============================================================================
+
+install-foundry:
+	@echo "$(CYAN)📦 Installing/updating Foundry...$(NC)"
+	curl -L https://foundry.paradigm.xyz | bash
+	foundryup
+	@echo "$(GREEN)✅ Foundry installed/updated!$(NC)"
+
+install-deps:
+	@echo "$(CYAN)📦 Installing dependencies...$(NC)"
+	forge install
+	@echo "$(GREEN)✅ Dependencies installed!$(NC)"
+
+# ============================================================================
+# BUILD & TEST
+# ============================================================================
+
+build:
+	@echo "$(CYAN)🔨 Building contracts with Forge...$(NC)"
+	forge build
+	@echo "$(GREEN)✅ Build complete!$(NC)"
+
+clean:
+	@echo "$(CYAN)🧹 Cleaning build artifacts...$(NC)"
+	forge clean
+	rm -rf out cache broadcast
+	@echo "$(GREEN)✅ Clean complete!$(NC)"
+
+test:
+	@echo "$(CYAN)🧪 Running Forge tests...$(NC)"
+	forge test -vv
+	@echo "$(GREEN)✅ Tests complete!$(NC)"
+
+test-gas:
+	@echo "$(CYAN)⛽ Running tests with gas reporting...$(NC)"
+	forge test --gas-report
+
+coverage:
+	@echo "$(CYAN)📊 Running coverage...$(NC)"
+	forge coverage
+	@echo "$(GREEN)✅ Coverage complete!$(NC)"
+
+snapshot:
+	@echo "$(CYAN)📸 Creating gas snapshot...$(NC)"
+	forge snapshot
+	@echo "$(GREEN)✅ Snapshot saved to .gas-snapshot$(NC)"
+
+# ============================================================================
+# DEPLOYMENT
+# ============================================================================
+
+deploy: check-network
+	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo "$(CYAN)🚀 Deploying Spirit Registry V2 to $(NETWORK)$(NC)"
+	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@echo "Account: $(ACCOUNT)"
+	@echo "Owner: $${SPIRIT_COUNCIL_ADDRESS:-Deployer}"
+	@echo "Verify: $(VERIFY)"
+	@echo "$(CYAN)━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(NC)"
+	@forge script script/DeploySpiritRegistryV2.s.sol:DeploySpiritRegistryV2 $(FORGE_FLAGS)
+	@echo "$(GREEN)✅ Deployment complete!$(NC)"
+	@echo "$(YELLOW)📁 Check deployments/$(NETWORK)/latest.json for addresses$(NC)"
+
+deploy-testnet:
+	@$(MAKE) deploy NETWORK=sepolia
+
+deploy-mainnet:
+	@echo "$(RED)⚠️  MAINNET DEPLOYMENT - ARE YOU SURE? [y/N]$(NC)"
+	@read -p "" confirm; \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
+		$(MAKE) deploy NETWORK=ethereum VERIFY=true; \
+	else \
+		echo "$(YELLOW)Deployment cancelled$(NC)"; \
+	fi
+
+deploy-base:
+	@$(MAKE) deploy NETWORK=base
+
+deploy-base-sepolia:
+	@$(MAKE) deploy NETWORK=base-sepolia
+
+deploy-local:
+	@$(MAKE) deploy NETWORK=localhost VERIFY=false
+
+# Simulate deployment (dry run)
+deploy-dry:
+	@echo "$(CYAN)🔍 Simulating deployment to $(NETWORK)...$(NC)"
+	@forge script script/DeploySpiritRegistryV2.s.sol:DeploySpiritRegistryV2 \
+		--rpc-url $(NETWORK) \
+		--account $(ACCOUNT) \
+		-vvv
+	@echo "$(GREEN)✅ Simulation complete!$(NC)"
+
+# ============================================================================
+# VERIFICATION
+# ============================================================================
+
+verify:
+	@echo "$(CYAN)🔍 Verifying contracts on Etherscan...$(NC)"
+	@CONTRACTS=$$(cat deployments/$(NETWORK)/latest.json | jq -r 'to_entries[] | select(.key | endswith("Registry") or endswith("Controller")) | .value'); \
+	for contract in $$CONTRACTS; do \
+		echo "Verifying $$contract..."; \
+		forge verify-contract $$contract --chain $(NETWORK) --watch; \
+	done
+	@echo "$(GREEN)✅ Verification complete!$(NC)"
+
+verify-single:
+	@echo "$(CYAN)🔍 Verifying single contract...$(NC)"
+	@if [ -z "$(CONTRACT)" ] || [ -z "$(ADDRESS)" ]; then \
+		echo "$(RED)Error: CONTRACT and ADDRESS required$(NC)"; \
+		echo "Usage: make verify-single CONTRACT=SpiritIdentityRegistryV2 ADDRESS=0x..."; \
+		exit 1; \
+	fi
+	forge verify-contract $(ADDRESS) $(CONTRACT) \
+		--chain $(NETWORK) \
+		--etherscan-api-key $${ETHERSCAN_API_KEY} \
+		--watch
+	@echo "$(GREEN)✅ Verification complete!$(NC)"
+
+# ============================================================================
+# INTERACTION
+# ============================================================================
+
+setup-agent:
+	@echo "$(CYAN)🤖 Setting up new agent...$(NC)"
+	@if [ -z "$(CONTROLLER)" ] || [ -z "$(AGENT_EOA)" ] || [ -z "$(ARTIST)" ]; then \
+		echo "$(RED)Error: Required parameters missing$(NC)"; \
+		echo "Usage: make setup-agent CONTROLLER=0x... AGENT_EOA=0x... ARTIST=0x..."; \
+		exit 1; \
+	fi
+	cast send $(CONTROLLER) \
+		"quickSetup(address,address,string,bool)" \
+		$(AGENT_EOA) \
+		$(ARTIST) \
+		"ipfs://default" \
+		false \
+		--rpc-url $(NETWORK) \
+		--account $(ACCOUNT)
+	@echo "$(GREEN)✅ Agent setup complete!$(NC)"
+
+verify-signature:
+	@echo "$(CYAN)🔐 Verifying agent signature...$(NC)"
+	@if [ -z "$(REGISTRY)" ] || [ -z "$(AGENT_ID)" ] || [ -z "$(MESSAGE)" ] || [ -z "$(SIGNATURE)" ]; then \
+		echo "$(RED)Error: Required parameters missing$(NC)"; \
+		exit 1; \
+	fi
+	@MESSAGE_HASH=$$(cast keccak "$(MESSAGE)"); \
+	RESULT=$$(cast call $(REGISTRY) \
+		"verifyAgentSignature(uint256,bytes32,bytes)" \
+		$(AGENT_ID) \
+		$$MESSAGE_HASH \
+		$(SIGNATURE) \
+		--rpc-url $(NETWORK)); \
+	if [ "$$RESULT" = "0x0000000000000000000000000000000000000000000000000000000000000001" ]; then \
+		echo "$(GREEN)✅ Signature valid!$(NC)"; \
+	else \
+		echo "$(RED)❌ Invalid signature$(NC)"; \
+	fi
+
+get-addresses:
+	@echo "$(CYAN)📋 Latest deployment addresses for $(NETWORK):$(NC)"
+	@cat deployments/$(NETWORK)/latest.json 2>/dev/null | jq '.' || echo "No deployment found"
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+
+check-network:
+	@if [ "$(NETWORK)" = "ethereum" ] && [ "$(VERIFY)" != "true" ]; then \
+		echo "$(YELLOW)⚠️  Warning: Mainnet deployment should verify contracts$(NC)"; \
+	fi
+
+format:
+	@echo "$(CYAN)📝 Formatting code...$(NC)"
+	forge fmt
+	@echo "$(GREEN)✅ Formatting complete!$(NC)"
+
+audit:
+	@echo "$(CYAN)🔍 Running slither audit...$(NC)"
+	slither contracts/Spirit --config-file slither.config.json
+	@echo "$(GREEN)✅ Audit complete!$(NC)"
+
+gas-report:
+	@echo "$(CYAN)⛽ Generating gas report...$(NC)"
+	forge test --gas-report > gas-report.txt
+	@echo "$(GREEN)✅ Gas report saved to gas-report.txt$(NC)"
+
+# ============================================================================
+# DEVELOPMENT
+# ============================================================================
+
+watch:
+	@echo "$(CYAN)👁️  Watching for changes...$(NC)"
+	forge build --watch
+
+anvil:
+	@echo "$(CYAN)🔨 Starting Anvil local node...$(NC)"
+	anvil --accounts 10 --balance 10000
+
+anvil-fork:
+	@echo "$(CYAN)🔨 Starting Anvil fork of $(NETWORK)...$(NC)"
+	anvil --fork-url $${RPC_URL} --accounts 10 --balance 10000
+
+# ============================================================================
+# MIGRATION HELPERS
+# ============================================================================
+
+migrate-from-hardhat:
+	@echo "$(CYAN)📦 Migrating from Hardhat to Foundry...$(NC)"
+	@echo "1. Installing Foundry dependencies..."
+	forge install OpenZeppelin/openzeppelin-contracts@v5.0.0 --no-commit
+	forge install foundry-rs/forge-std --no-commit
+	@echo "2. Remapping imports..."
+	@echo "@openzeppelin/=lib/openzeppelin-contracts/" >> remappings.txt
+	@echo "forge-std/=lib/forge-std/src/" >> remappings.txt
+	@echo "3. Building with Forge..."
+	forge build
+	@echo "$(GREEN)✅ Migration complete!$(NC)"
+	@echo "$(YELLOW)Note: You may need to adjust import paths$(NC)"
+
+compare-gas:
+	@echo "$(CYAN)⛽ Comparing gas costs: Hardhat vs Foundry$(NC)"
+	@echo "Running Hardhat tests..."
+	npx hardhat test --grep "gas" > hardhat-gas.txt 2>&1
+	@echo "Running Foundry tests..."
+	forge test --gas-report > foundry-gas.txt
+	@echo "$(GREEN)Results saved to hardhat-gas.txt and foundry-gas.txt$(NC)"
+
+# ============================================================================
+# SECURITY
+# ============================================================================
+
+secure-env:
+	@echo "$(CYAN)🔐 Checking environment security...$(NC)"
+	@if [ -f .env ]; then \
+		echo "$(YELLOW)⚠️  Warning: .env file exists$(NC)"; \
+		echo "Consider using keystore for production"; \
+	fi
+	@if [ -f .env.production ]; then \
+		echo "$(RED)❌ Error: .env.production should not exist!$(NC)"; \
+		echo "Use keystore for production keys"; \
+	fi
+	@echo "$(GREEN)✅ Security check complete$(NC)"
+
+.PHONY: all clean test build deploy help

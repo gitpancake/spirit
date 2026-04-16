@@ -1,0 +1,22 @@
+{
+  "extends": "solhint:recommended",
+  "rules": {
+    "compiler-version": [
+      "error",
+      "^0.8.0"
+    ],
+    "func-visibility": [
+      "warn",
+      {
+        "ignoreConstructors": true
+      }
+    ],
+    "not-rely-on-time": "off",
+    "no-empty-blocks": "warn",
+    "const-name-snakecase": "warn",
+    "func-name-mixedcase": "off",
+    "use-forbidden-name": "warn",
+    "visibility-modifier-order": "warn",
+    "avoid-call-value": "warn"
+  }
+}

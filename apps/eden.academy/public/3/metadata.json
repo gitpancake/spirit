@@ -1,0 +1,26 @@
+{
+  "original_filename": "0657_Disco_Dogs.jpg",
+  "ipfs_hash": "bafkreihlwq3ggeyuieqabnty53rzjbyydvqcxidv62pehkqys7wd5ohap4",
+  "work_id": "2ed4519d-7fc1-4872-8b50-d12d1d800d1f",
+  "title": "Disco Dogs",
+  "archive_number": "657",
+  "created_date": "2021-06-09",
+  "name": "Disco Dogs",
+  "description": "Disco Dogs",
+  "image": "ipfs://bafkreihlwq3ggeyuieqabnty53rzjbyydvqcxidv62pehkqys7wd5ohap4",
+  "tokenId": 3,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "657"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-09"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "0657_Disco_Dogs.jpg"
+    }
+  ]
+}

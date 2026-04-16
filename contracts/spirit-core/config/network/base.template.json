@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Spirit Protocol Base Mainnet Deployment Configuration",
+  "_generated": "2025-12-09",
+  "_source": "script/config/NetworkConfig.sol :: SpiritDeploymentConfig",
+
+  "network": {
+    "name": "Base Mainnet",
+    "chainId": 8453,
+    "rpcUrl": "https://mainnet.base.org"
+  },
+
+  "addresses_to_fill": {
+    "_comment": "These addresses are currently address(0) in NetworkConfig.sol - MUST be set before deployment",
+
+    "admin": {
+      "value": "0x0000000000000000000000000000000000000000",
+      "description": "Protocol admin multisig - receives DEFAULT_ADMIN_ROLE on all contracts",
+      "type": "address",
+      "required": true,
+      "safeToModify": true,
+      "recommendation": "Use a Safe multisig (2-of-3 minimum)"
+    },
+
+    "treasury": {
+      "value": "0x0000000000000000000000000000000000000000",
+      "description": "Fee recipient - receives protocol fees and cancelled vesting tokens",
+      "type": "address",
+      "required": true,
+      "safeToModify": true,
+      "recommendation": "Use a Safe multisig or DAO treasury"
+    },
+
+    "distributor": {
+      "value": "0x0000000000000000000000000000000000000000",
+      "description": "Airstream distributor - authorized to trigger merkle-based token distributions",
+      "type": "address",
+      "required": true,
+      "safeToModify": true,
+      "recommendation": "Can be EOA for operational speed, or multisig for security"
+    }
+  },
+
+  "external_contracts": {
+    "_comment": "Pre-filled Base mainnet addresses - DO NOT MODIFY unless protocol upgrades",
+
+    "vestingScheduler": {
+      "value": "0x5AaB2FB7a0D67DD0b5d40D4A4AE96b7f8Af89E81",
+      "description": "Superfluid VestingSchedulerV3 contract",
+      "type": "address",
+      "safeToModify": false,
+      "source": "Superfluid"
+    },
+
+    "superTokenFactory": {
+      "value": "0xe20B9a38E0c96F61d1bA6b42a61512D56Fea1Eb3",
+      "description": "Superfluid SuperTokenFactory for creating SuperTokens",
+      "type": "address",
+      "safeToModify": false,
+      "source": "Superfluid"
+    },
+
+    "positionManager": {
+      "value": "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+      "description": "Uniswap V4 PositionManager for LP positions",
+      "type": "address",
+      "safeToModify": false,
+      "source": "Uniswap V4"
+    },
+
+    "poolManager": {
+      "value": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+      "description": "Uniswap V4 PoolManager singleton",
+      "type": "address",
+      "safeToModify": false,
+      "source": "Uniswap V4"
+    },
+
+    "permit2": {
+      "value": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "description": "Uniswap Permit2 for gasless approvals",
+      "type": "address",
+      "safeToModify": false,
+      "source": "Uniswap"
+    },
+
+    "airstreamFactory": {
+      "value": "0x4D69F16cFfc6db4e1E7FF1f49e47a7f4bE4E4776",
+      "description": "Superfluid AirstreamFactory for merkle-based distributions",
+      "type": "address",
+      "safeToModify": false,
+      "source": "Superfluid"
+    }
+  },
+
+  "token_params": {
+    "_comment": "SPIRIT token configuration - modify with caution",
+
+    "spiritTokenName": {
+      "value": "SPIRIT",
+      "description": "ERC20 token name",
+      "type": "string",
+      "safeToModify": true,
+      "recommendation": "Keep as 'SPIRIT' for brand consistency"
+    },
+
+    "spiritTokenSymbol": {
+      "value": "SPIRIT",
+      "description": "ERC20 token symbol",
+      "type": "string",
+      "safeToModify": true,
+      "recommendation": "Keep as 'SPIRIT' for brand consistency"
+    },
+
+    "spiritTokenSupply": {
+      "value": "1000000000000000000000000000",
+      "valueFormatted": "1,000,000,000 SPIRIT (1B)",
+      "description": "Total supply in wei (18 decimals)",
+      "type": "uint256",
+      "safeToModify": true,
+      "recommendation": "1B is standard, matches child token supply parity"
+    },
+
+    "spiritTokenLiquiditySupply": {
+      "value": "50000000000000000000000000",
+      "valueFormatted": "50,000,000 SPIRIT (5%)",
+      "description": "Tokens allocated to Uniswap V4 liquidity pool",
+      "type": "uint256",
+      "safeToModify": true,
+      "recommendation": "5% for initial LP, remaining 950M to treasury"
+    }
+  },
+
+  "uniswap_params": {
+    "_comment": "Uniswap V4 pool configuration - advanced users only",
+
+    "spiritPoolFee": {
+      "value": 10000,
+      "valueFormatted": "1% (10000 / 1000000)",
+      "description": "Pool swap fee in hundredths of a bip",
+      "type": "uint24",
+      "safeToModify": true,
+      "recommendation": "1% is standard for new tokens, can reduce later"
+    },
+
+    "spiritInitialTick": {
+      "value": 0,
+      "description": "Initial price tick (0 = 1:1 with ETH)",
+      "type": "int24",
+      "safeToModify": true,
+      "recommendation": "Calculate based on desired launch price"
+    },
+
+    "spiritTickSpacing": {
+      "value": 200,
+      "description": "Tick spacing for concentrated liquidity",
+      "type": "int24",
+      "safeToModify": false,
+      "recommendation": "Must match pool fee tier, 200 is correct for 1%"
+    }
+  },
+
+  "hardcoded_constants": {
+    "_comment": "These values are hardcoded in Solidity contracts - READ ONLY, cannot be changed via config",
+
+    "staking_pool": {
+      "_source": "src/core/StakingPool.sol",
+
+      "MINIMUM_STAKE_AMOUNT": {
+        "value": "1000000000000000000",
+        "valueFormatted": "1 token",
+        "description": "Minimum tokens required to stake"
+      },
+      "MINIMUM_LOCKING_PERIOD": {
+        "value": 604800,
+        "valueFormatted": "1 week",
+        "description": "Shortest allowed lock duration"
+      },
+      "MAXIMUM_LOCKING_PERIOD": {
+        "value": 94608000,
+        "valueFormatted": "156 weeks (3 years)",
+        "description": "Longest allowed lock duration"
+      },
+      "MIN_MULTIPLIER": {
+        "value": 10000,
+        "valueFormatted": "1x (10000 / 10000)",
+        "description": "Multiplier at minimum lock period"
+      },
+      "MAX_MULTIPLIER": {
+        "value": 360000,
+        "valueFormatted": "36x (360000 / 10000)",
+        "description": "Multiplier at maximum lock period"
+      },
+      "STAKEHOLDER_LOCKING_PERIOD": {
+        "value": 31536000,
+        "valueFormatted": "52 weeks (1 year)",
+        "description": "Lock period for stakeholder stakes"
+      }
+    },
+
+    "child_tokens": {
+      "_source": "src/factory/SpiritFactory.sol",
+
+      "CHILD_TOTAL_SUPPLY": {
+        "value": "1000000000000000000000000000",
+        "valueFormatted": "1,000,000,000 (1B)",
+        "description": "Total supply per child/agent token"
+      },
+      "DEFAULT_LIQUIDITY_SUPPLY": {
+        "value": "250000000000000000000000000",
+        "valueFormatted": "250,000,000 (25%)",
+        "description": "Child token LP allocation"
+      },
+      "AIRSTREAM_SUPPLY": {
+        "value": "250000000000000000000000000",
+        "valueFormatted": "250,000,000 (25%)",
+        "description": "Child token airstream allocation"
+      },
+      "AIRSTREAM_DURATION": {
+        "value": 31536000,
+        "valueFormatted": "52 weeks (1 year)",
+        "description": "Airstream vesting duration"
+      },
+      "DEFAULT_POOL_FEE": {
+        "value": 10000,
+        "valueFormatted": "1%",
+        "description": "Child token Uniswap pool fee"
+      },
+      "DEFAULT_TICK_SPACING": {
+        "value": 200,
+        "description": "Child token Uniswap tick spacing"
+      }
+    }
+  }
+}

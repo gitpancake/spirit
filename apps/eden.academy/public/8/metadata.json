@@ -1,0 +1,26 @@
+{
+  "original_filename": "3630_A_housefly_being_a_business_man.jpg",
+  "ipfs_hash": "bafkreieyi4ahxh3xjci4dwzq6s5pvwaj7eyn4kntrigxjvtza4ybe3efva",
+  "work_id": "2fe8f6de-387d-46ed-9dff-762eaa0ba6f3",
+  "title": "A housefly being a business man",
+  "archive_number": "3630",
+  "created_date": "2021-07-19",
+  "name": "A housefly being a business man",
+  "description": "A housefly being a business man",
+  "image": "ipfs://bafkreieyi4ahxh3xjci4dwzq6s5pvwaj7eyn4kntrigxjvtza4ybe3efva",
+  "tokenId": 8,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "3630"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-07-19"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "3630_A_housefly_being_a_business_man.jpg"
+    }
+  ]
+}

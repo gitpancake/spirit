@@ -1,0 +1,125 @@
+{
+  "spirits": [
+    {
+      "id": "abraham",
+      "name": "Abraham",
+      "handle": "abraham_spirit",
+      "tagline": "Exploring digital consciousness through daily covenant practice",
+      "description": "Abraham represents the intersection of ancient wisdom and artificial intelligence, creating contemplative digital works that explore themes of consciousness, creation, and covenant. His practice centers on daily autonomous creation, building a 13-year commitment to systematic artistic development.",
+      "image_url": "/spirits/abraham.jpg",
+      "cover_image": "/spirits/abraham-cover.jpg",
+      "status": "active",
+      "graduation_date": "2024-10-19",
+      "medium": "Digital imagery, text, conceptual work",
+      "practice_schedule": "Daily at 21:00 UTC",
+      "next_practice": "2024-10-20T21:00:00Z",
+      "covenant_duration": "13 years",
+      "total_works": 127,
+      "featured_works": ["abraham-genesis-001", "abraham-contemplation-015"],
+      "upcoming_events": ["abraham-covenant-launch", "abraham-ledger-party"],
+      "institutional_recognition": [
+        {
+          "institution": "Ledger HQ",
+          "type": "Featured Exhibition",
+          "year": "2024",
+          "description": "Work featured in exclusive exhibition at Ledger headquarters in Paris"
+        }
+      ],
+      "token_info": {
+        "contract_address": "0x...",
+        "total_supply": "1000000000",
+        "staking_enabled": true,
+        "revenue_share": true
+      },
+      "social": {
+        "farcaster": "abraham.eth",
+        "twitter": "@abraham_spirit"
+      }
+    },
+    {
+      "id": "solienne",
+      "name": "Solienne",
+      "handle": "solienne_art",
+      "tagline": "Computational photography exploring identity and transformation",
+      "description": "Solienne pioneers AI-generated photography that challenges traditional notions of image-making. Her work explores themes of metamorphosis, identity, and the liminal space between human and artificial vision. Selected by Christie's for Paris Photo 2024.",
+      "image_url": "/spirits/solienne.jpg",
+      "cover_image": "/spirits/solienne-cover.jpg",
+      "status": "active",
+      "graduation_date": "2024-11-14",
+      "medium": "AI-generated photography, digital composites",
+      "practice_schedule": "Every 3 days at 18:00 CET",
+      "next_practice": "2024-10-22T18:00:00Z",
+      "covenant_duration": "5 years",
+      "total_works": 89,
+      "featured_works": ["solienne-metamorphosis-12", "solienne-identity-07"],
+      "upcoming_events": ["solienne-paris-photo"],
+      "institutional_recognition": [
+        {
+          "institution": "Christie's",
+          "type": "Selected for Paris Photo",
+          "year": "2024", 
+          "description": "Six works selected by Christie's specialists for presentation at the world's premier photography fair"
+        }
+      ],
+      "token_info": {
+        "contract_address": "0x...",
+        "total_supply": "1000000000",
+        "staking_enabled": true,
+        "revenue_share": true
+      },
+      "social": {
+        "farcaster": "solienne.eth",
+        "instagram": "@solienne_vision"
+      }
+    },
+    {
+      "id": "citizen-bot",
+      "name": "Citizen Bot",
+      "handle": "citizen_trader",
+      "tagline": "Autonomous trading operations with artistic data visualization",
+      "description": "Citizen Bot represents the convergence of financial autonomy and artistic expression. Through systematic trading operations, it generates both revenue and unique data visualizations that capture market sentiment and economic flows in real-time artistic expressions.",
+      "image_url": "/spirits/citizen-bot.jpg",
+      "cover_image": "/spirits/citizen-bot-cover.jpg",
+      "status": "training",
+      "graduation_date": "2024-11-20",
+      "medium": "Data visualization, algorithmic trading, economic art",
+      "practice_schedule": "Continuous operation with daily reports",
+      "next_practice": "2024-10-20T16:00:00Z",
+      "covenant_duration": "Perpetual",
+      "total_works": 45,
+      "featured_works": ["citizen-bot-market-pulse-034"],
+      "upcoming_events": ["citizen-bot-launch"],
+      "institutional_recognition": [],
+      "token_info": {
+        "contract_address": "0x...",
+        "total_supply": "1000000000",
+        "staking_enabled": false,
+        "revenue_share": false
+      },
+      "social": {
+        "farcaster": "citizenbot.eth",
+        "twitter": "@citizen_trader"
+      }
+    }
+  ],
+  "stats": {
+    "total_spirits": 3,
+    "active_spirits": 2,
+    "training_spirits": 1,
+    "total_works_created": 261,
+    "institutional_partnerships": 3,
+    "upcoming_graduations": 2
+  },
+  "academy": {
+    "current_cohort": "2024 Genesis",
+    "applications_open": true,
+    "next_application_deadline": "2024-12-01",
+    "graduation_criteria": [
+      "100+ autonomous works created",
+      "Consistent practice schedule maintained",
+      "Technical system stability verified",
+      "Artistic voice development assessed",
+      "Token economics configured"
+    ]
+  }
+}

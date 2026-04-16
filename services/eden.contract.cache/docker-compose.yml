@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  contract-listener:
+    build: .
+    container_name: contract-listener
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - RPC_URL=${RPC_URL}
+      - RPC_HTTP_URL=${RPC_HTTP_URL}
+      - CHAIN_ID=${CHAIN_ID:-1}
+      - CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
+      - CONTRACT_ABI=${CONTRACT_ABI}
+      - CONTRACT_START_BLOCK=${CONTRACT_START_BLOCK}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - WS_PING_INTERVAL=${WS_PING_INTERVAL:-30000}
+      - WS_PONG_TIMEOUT=${WS_PONG_TIMEOUT:-5000}
+      - WS_RECONNECT_DELAY=${WS_RECONNECT_DELAY:-5000}
+      - WS_MAX_RECONNECT_ATTEMPTS=${WS_MAX_RECONNECT_ATTEMPTS:-10}
+      - WEBHOOK_MAX_RETRIES=${WEBHOOK_MAX_RETRIES:-3}
+      - WEBHOOK_RETRY_DELAY=${WEBHOOK_RETRY_DELAY:-1000}
+      - WEBHOOK_TIMEOUT=${WEBHOOK_TIMEOUT:-10000}
+      - INITIAL_SYNC_ENABLED=${INITIAL_SYNC_ENABLED:-true}
+      - INITIAL_SYNC_BLOCK_RANGE=${INITIAL_SYNC_BLOCK_RANGE:-1000}
+    volumes:
+      - ./data:/app/data
+      - sync-state:/app
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  sync-state:

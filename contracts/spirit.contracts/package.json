@@ -1,0 +1,44 @@
+{
+  "name": "spirit.smart.contracts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint:sol": "solhint 'contracts/**/*.sol'",
+    "lint:sol:fix": "prettier --write 'contracts/**/*.sol' && solhint 'contracts/**/*.sol' --fix",
+    "format": "prettier --write 'contracts/**/*.sol' 'script/**/*.sol'",
+    "test": "forge test",
+    "test:verbose": "forge test -vvv",
+    "coverage": "forge coverage",
+    "gas-report": "forge test --gas-report",
+    "clean": "forge clean",
+    "compile": "forge build",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.1",
+    "merkletreejs": "^0.6.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-solidity": "^1.4.2",
+    "solady": "^0.1.12",
+    "solhint": "^6.0.0"
+  },
+  "lint-staged": {
+    "*.sol": [
+      "solhint --fix",
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@openzeppelin/contracts-upgradeable": "^5.4.0",
+    "@superfluid-finance/ethereum-contracts": "^1.13.0",
+    "dotenv": "^16.4.7",
+    "viem": "^2.37.8"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

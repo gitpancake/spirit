@@ -1,0 +1,26 @@
+{
+  "original_filename": "2064_A_man_wearing_a_mask_of_a_monkeys_head.jpg",
+  "ipfs_hash": "bafkreifir2qvgdatoz24455j5bkm32slub6sobkoc4ssfwb4jowud25p5e",
+  "work_id": "78bdf137-9c9e-4acc-8f84-db07b9d0dce9",
+  "title": "A man wearing a mask of a monkeys head",
+  "archive_number": "2064",
+  "created_date": "2021-06-28",
+  "name": "A man wearing a mask of a monkeys head",
+  "description": "A man wearing a mask of a monkeys head",
+  "image": "ipfs://bafkreifir2qvgdatoz24455j5bkm32slub6sobkoc4ssfwb4jowud25p5e",
+  "tokenId": 7,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "2064"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-28"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "2064_A_man_wearing_a_mask_of_a_monkeys_head.jpg"
+    }
+  ]
+}

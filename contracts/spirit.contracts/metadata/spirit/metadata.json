@@ -1,0 +1,21 @@
+{
+    "name": "SPIRIT Token",
+    "symbol": "SPIRIT",
+    "description": "The foundational token of Eden's autonomous creative agent ecosystem. Each token represents participation in the collective emergence of cultural Spirits—AI agents that co-create, collaborate, and evolve alongside humans. Holders receive allocations from every new Spirit launch and participate in the governance of humanity's first platform for autonomous creative intelligence.",
+    "image": "ipfs://bafybeidffnsuuyzjxdmhmez46goxahkw4gt6axhyw77w5xu7y37z7ha6by",
+    "external_url": "https://eden.art",
+    "website": "https://eden.art",
+    "tags": [
+        "autonomous-agents",
+        "creative-intelligence",
+        "cultural-emergence",
+        "collective-creativity",
+        "spirit-governance",
+        "agent-economics",
+        "human-ai-collaboration"
+    ],
+    "creative_philosophy": "Investment in the collective emergence of autonomous creative culture. Each token represents participation in humanity's transition toward collaborative intelligence where AI Spirits extend rather than replace human creativity.",
+    "version": "2.0.0",
+    "protocol_genesis": "2022-01-01",
+    "updated": "2025-08-20"
+}

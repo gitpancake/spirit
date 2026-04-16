@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "app/**/*.{ts,tsx}": {
+      "runtime": "@vercel/node@3.0.7",
+      "includeFiles": ".next/server/**"
+    }
+  },
+  "regions": ["iad1"]
+}

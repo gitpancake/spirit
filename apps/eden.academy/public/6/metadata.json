@@ -1,0 +1,26 @@
+{
+  "original_filename": "2087_The_baby_thrown_out_with_the_bathwater.jpg",
+  "ipfs_hash": "bafkreigyhaq5byrx67i7g4mrb3txu3rhkda2ohb4lb5ylygmbq43f42dfu",
+  "work_id": "3bf4ea86-0d73-4165-9d1c-9f8191883232",
+  "title": "The baby thrown out with the bathwater",
+  "archive_number": "2087",
+  "created_date": "2021-06-28",
+  "name": "The baby thrown out with the bathwater",
+  "description": "The baby thrown out with the bathwater",
+  "image": "ipfs://bafkreigyhaq5byrx67i7g4mrb3txu3rhkda2ohb4lb5ylygmbq43f42dfu",
+  "tokenId": 6,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "2087"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-28"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "2087_The_baby_thrown_out_with_the_bathwater.jpg"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "original_filename": "1294_last_time_I_commited_suicide.jpg",
+  "ipfs_hash": "bafkreihcf2ddv3eugbdykoupyesygbnnbbpdbpfodsod47iwl57htdheru",
+  "work_id": "6bc48222-a594-456b-a464-46086dc87f26",
+  "title": "last time I commited suicide",
+  "archive_number": "1294",
+  "created_date": "2021-06-18",
+  "name": "last time I commited suicide",
+  "description": "last time I commited suicide",
+  "image": "ipfs://bafkreihcf2ddv3eugbdykoupyesygbnnbbpdbpfodsod47iwl57htdheru",
+  "tokenId": 0,
+  "attributes": [
+    {
+      "trait_type": "Archive Number",
+      "value": "1294"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2021-06-18"
+    },
+    {
+      "trait_type": "Original Filename",
+      "value": "1294_last_time_I_commited_suicide.jpg"
+    }
+  ]
+}
