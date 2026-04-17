@@ -8,7 +8,12 @@ out/
 .env.local
 .DS_Store
 *.log
+
+# Foundry
 cache/
+cache_foundry/
 artifacts/
-typechain-types/
 broadcast/
+typechain-types/
+
+# Hardhat (same as above, but redundant-safe)
