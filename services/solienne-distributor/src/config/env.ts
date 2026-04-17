@@ -8,7 +8,10 @@ export interface AppConfig {
   chainId: number;
   rpcUrl: string;
   alchemyApiKey: string;
+  redisUrl: string;
   minterContractAddress: string;
+  subscribersAddressV2?: string;
+  subscribersAddressV1?: string;
   distributorPrivateKey: string;
   pollIntervalMs: number;
   maxRetries: number;
@@ -16,6 +19,7 @@ export interface AppConfig {
   gasLimit: number;
   maxFeePerGas?: bigint;
   maxPriorityFeePerGas?: bigint;
+  lastDistributedManifestoId: number;
   logLevel: string;
   logPretty: boolean;
 }
@@ -98,16 +102,29 @@ export function loadConfig(): AppConfig {
     const rpcUrl = getRequiredEnv('RPC_URL');
     const alchemyApiKey = getRequiredEnv('ALCHEMY_API_KEY');
 
+    // Redis configuration
+    const redisUrl = getRequiredEnv('REDIS_URL');
+
     // Contract addresses
     const minterContractAddress = validateAddress(
       getRequiredEnv('MINTER_CONTRACT_ADDRESS'),
       'MINTER_CONTRACT_ADDRESS'
     );
 
+    // V2 contract address (optional - for V2 subscriber support)
+    const subscribersAddressV2Raw = process.env.SUBSCRIBERS_ADDRESS_V2;
+    const subscribersAddressV2 = subscribersAddressV2Raw
+      ? validateAddress(subscribersAddressV2Raw, 'SUBSCRIBERS_ADDRESS_V2')
+      : undefined;
+
+    // V1 contract address (optional - for legacy subscriber support)
+    const subscribersAddressV1Raw = process.env.SUBSCRIBERS_ADDRESS_V1;
+    const subscribersAddressV1 = subscribersAddressV1Raw
+      ? validateAddress(subscribersAddressV1Raw, 'SUBSCRIBERS_ADDRESS_V1')
+      : undefined;
+
     // Wallet configuration
-    const distributorPrivateKey = validatePrivateKey(
-      getRequiredEnv('DISTRIBUTOR_PRIVATE_KEY')
-    );
+    const distributorPrivateKey = validatePrivateKey(getRequiredEnv('DISTRIBUTOR_PRIVATE_KEY'));
 
     // Monitoring configuration
     const pollIntervalMs = parseInt(getOptionalEnv('POLL_INTERVAL_MS', '5000'), 10);
@@ -119,6 +136,12 @@ export function loadConfig(): AppConfig {
     const maxFeePerGas = parseGwei(process.env.MAX_FEE_PER_GAS);
     const maxPriorityFeePerGas = parseGwei(process.env.MAX_PRIORITY_FEE_PER_GAS);
 
+    // Startup catch-up configuration
+    const lastDistributedManifestoId = parseInt(
+      getOptionalEnv('LAST_DISTRIBUTED_MANIFESTO_ID', '30'),
+      10
+    );
+
     // Logging configuration
     const logLevel = getOptionalEnv('LOG_LEVEL', 'info');
     const logPretty = getOptionalEnv('LOG_PRETTY', 'true') === 'true';
@@ -128,7 +151,10 @@ export function loadConfig(): AppConfig {
       chainId,
       rpcUrl,
       alchemyApiKey,
+      redisUrl,
       minterContractAddress,
+      subscribersAddressV2,
+      subscribersAddressV1,
       distributorPrivateKey,
       pollIntervalMs,
       maxRetries,
@@ -136,6 +162,7 @@ export function loadConfig(): AppConfig {
       gasLimit,
       maxFeePerGas,
       maxPriorityFeePerGas,
+      lastDistributedManifestoId,
       logLevel,
       logPretty,
     };

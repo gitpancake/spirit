@@ -142,8 +142,8 @@ export class EventListener {
       }
 
       const event: SaleConfiguredEvent = {
-        manifestoId: parsedLog.args[0],
-        saleId: parsedLog.args[1],
+        saleId: parsedLog.args[0],
+        manifestoId: parsedLog.args[1],
         price: parsedLog.args[2],
         startTime: parsedLog.args[3],
         endTime: parsedLog.args[4],

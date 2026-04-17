@@ -6,6 +6,7 @@ Automated distribution service for Solienne Manifesto NFTs. Listens for `SaleCon
 
 - **Real-time Event Listening**: Uses Alchemy WebSockets to monitor smart contract events
 - **Automatic Distribution**: Checks if manifesto needs distribution and executes batch distribution to subscribers
+- **Multi-Version Support**: Aggregates subscribers from V1, V2, and V3 contracts for seamless migration
 - **Multi-Network Support**: Works with Base Mainnet and Base Sepolia
 - **Robust Error Handling**: Includes retry logic with exponential backoff
 - **Production Ready**: Type-safe TypeScript, structured logging, graceful shutdown
@@ -60,8 +61,13 @@ RPC_URL=https://base-sepolia.g.alchemy.com/v2/YOUR_API_KEY
 # Alchemy WebSocket
 ALCHEMY_API_KEY=your_alchemy_api_key
 
-# Contract Address
-MINTER_CONTRACT_ADDRESS=0x...    # Your deployed minter contract
+# Redis (for distribution tracking)
+REDIS_URL=redis://localhost:6379
+
+# Contract Addresses
+MINTER_CONTRACT_ADDRESS=0x...         # V3 minter contract (for events, distribution, and V3 subscribers)
+SUBSCRIBERS_ADDRESS_V2=0x...          # Optional: V2 contract (for V2 subscribers)
+SUBSCRIBERS_ADDRESS_V1=0x...          # Optional: V1 contract (for legacy V1 subscribers)
 
 # Wallet (KEEP SECURE!)
 DISTRIBUTOR_PRIVATE_KEY=0x...    # Private key with funds for gas
@@ -123,11 +129,46 @@ pm2 start dist/index.js --name solienne-distributor
 
 1. **Event Monitoring**: The service connects to Alchemy WebSocket and listens for `SaleConfigured` events
 2. **Event Detection**: When a new manifesto sale is created via `createManifestoAndSale()`
-3. **Distribution Check**: Checks if the manifesto has already been distributed using `distributed(manifestoId)`
-4. **Subscriber Fetch**: If not distributed, fetches all active subscribers from the contract
+3. **Distribution Check**: Checks if the manifesto has already been distributed today using Redis
+4. **Subscriber Aggregation**: If not distributed, fetches all active subscribers from V1, V2, and V3 contracts (configured)
+   - Subscribers from multiple contracts are combined
+   - Duplicates are allowed - same address can receive manifesto multiple times if subscribed to multiple versions
 5. **Batch Distribution**: Calls `distributeToSubscribersBatch()` with active subscribers (max 200 per batch)
 6. **Retry Logic**: Retries failed transactions with exponential backoff
 7. **Logging**: All actions are logged with transaction hashes for audit trail
+
+## Multi-Version Subscriber Support
+
+The distributor supports reading subscribers from multiple contract versions simultaneously, enabling seamless migration from V1 → V2 → V3:
+
+### Configuration Options
+
+- **V3 (Required)**: `MINTER_CONTRACT_ADDRESS` - The current V3 minter contract
+  - Used for: Event listening, distribution transactions, and V3 subscriber reading
+
+- **V2 (Optional)**: `SUBSCRIBERS_ADDRESS_V2` - The V2 subscriber contract
+  - Used for: Reading V2 subscribers only
+
+- **V1 (Optional)**: `SUBSCRIBERS_ADDRESS_V1` - The legacy V1 subscriber contract
+  - Used for: Reading V1 subscribers only
+
+### Behavior
+
+- All configured subscriber contracts are queried in parallel for efficiency
+- Subscribers are combined into a single list **without deduplication**
+- If the same address subscribes to multiple versions, they receive the manifesto multiple times
+- This allows for graceful migration while maintaining backwards compatibility
+
+### Example Setup
+
+```bash
+# During V1 → V2 → V3 migration
+MINTER_CONTRACT_ADDRESS=0xV3...      # Current V3 contract
+SUBSCRIBERS_ADDRESS_V2=0xV2...       # V2 contract (optional)
+SUBSCRIBERS_ADDRESS_V1=0xV1...       # V1 contract (optional)
+```
+
+The distributor will fetch and combine subscribers from all three contracts.
 
 ## Error Handling
 

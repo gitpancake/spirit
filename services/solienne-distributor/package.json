@@ -26,10 +26,12 @@
     "alchemy-sdk": "^3.4.5",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.4",
+    "ioredis": "^5.8.2",
     "pino": "^9.5.0",
     "pino-pretty": "^11.3.0"
   },
   "devDependencies": {
+    "@types/ioredis": "^4.28.10",
     "@types/node": "^22.10.1",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
